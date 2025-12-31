@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add User - MDR Vehicle Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="addUserPage">
+    <div class="route-controls">
+        <button onclick="window.location.href='../index.html'" class="logout-btn">←</button>
+    </div>
+    
+    <div class="login-header">
+        <img src="../mdr_monogram.png" alt="MDR Logo" style="width: 120px; margin-bottom: 24px; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));" />
+    </div>
+    
+    <div class="login-container">
+        <h3 class="login-title">Add New User</h3>
+        <p class="login-subtitle">Create a new account</p>
+        
+        <div class="input-group">
+            <input type="email" id="newEmail" placeholder="User Email" class="input-field" />
+        </div>
+
+        <div class="input-group">
+            <input type="password" id="newPassword" placeholder="Emp-id" class="input-field" />
+            <div id="togglePassword" class="password-toggle eye-open"></div>
+        </div>
+
+        <div class="input-group">
+            <select id="userRole" class="input-field">
+                <option value="employee">employee</option>
+                <option value="admin">admin</option>
+            </select>
+        </div>
+        <div class="input-group">
+    <select id="assignedRoute" class="input-field">
+        <option value="TAMBARAM">TAMBARAM</option>
+        <option value="PERAMBUR">PERAMBUR</option>
+        <option value="AVADI">AVADI</option>
+    </select>
+</div>
+
+
+        <button id="createUserBtn" class="login-btn">Add User</button>
+
+        <div id="statusText" class="error-text" style="display: none;"></div>
+    </div>
+</div>
+
+<script type="module" src="adduser.js"></script>
+</body>
+</html>

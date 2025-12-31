@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="src/style.css"/>
+    <meta charset="UTF-8" />
+    <title>MDR VEHICLE TRACKING</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6,Array.prototype.includes,Promise,Object.assign,fetch"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBg_M5sBVJMN4EQqZ9isya-87ax8faRxoI"></script>
+</head>
+<body>
+    <div id="loginPage">
+        <div class="login-header">
+            <img src="mdr.png" alt="MDR Logo" class="login-logo" />
+        </div>
+        
+        <div class="login-container">
+            <h3 class="login-title">MDR Vehicle Tracking</h3>
+            <p class="login-subtitle">Sign in</p>
+            
+            <div class="input-group">
+                <input type="email" id="emailInput" placeholder="Enter email" class="input-field" />
+            </div>
+
+            <div class="input-group">
+                <input type="password" id="passwordInput" placeholder="Enter password" class="input-field" />
+                <div id="togglePassword" class="password-toggle eye-open"></div>
+            </div>
+
+            <button id="loginBtn" class="login-btn">Login</button>
+
+            <div id="errorText" class="error-text" style="display: none;">
+                Invalid login details
+            </div>
+        </div>
+    </div>
+
+    <div id="routeSelectionPage" style="display: none;">
+        <div class="route-controls">
+            <button id="addUserBtn" class="add-user-btn">➕ Add User</button>
+
+            <button id="routeLogoutBtn" class="logout-btn">⏻</button>
+            
+        </div>
+        <div class="route-header">
+            <img src="mdr_monogram.png" alt="MDR Logo" class="route-logo" />
+            <h3 class="route-title">Select a Route</h3>
+            <p class="route-subtitle">Choose a route to track vehicles</p>
+        </div>
+        
+        <div id="routeList" class="routes-grid"></div>
+    </div>
+
+    <div id="trackingPage" style="display: none;">
+        <button id="toggleSidebarBtn" class="toggle-sidebar">☰</button>
+        
+        <div id="bar" class="sidebar">
+            <div class="sidebar-header">
+              <div class="sidebar-actions">
+  <button id="sidebarBackButton" class="action-btn back-btn" onclick="backToRoutes()"></button>
+  <button id="sidebarLogoutButton" class="action-btn logout-btn" aria-label="Sign out"></button>
+</div>
+
+                <h3 id="driverList" class="route-info">Drivers</h3>
+            </div>
+            
+            <div class="drivers-container">
+                <div class="sidebar-footer">
+                    <button id="feedbackButton" class="feedback-btn">
+                        <span class="feedback-icon">💬</span>
+                        <span>Send Feedback</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <div id="speedCircle" class="speed-indicator" style="display: none;">
+                0 km/h
+            </div>
+            
+            <div id="etaDisplay" class="eta-display" style="display: none;">
+                <div class="eta-header">📍 Your Location</div>
+                <div class="eta-time">ETA: --</div>
+            </div>
+            
+            <div class="map-controls">
+                <button id="toggleTrafficBtn" class="map-btn traffic-btn"></button>
+                <button id="zoomToVehicleBtn" title="Zoom to Vehicle" class="map-btn zoom-btn"></button>
+                <button id="toggleEmployeeLocationBtn" title="Toggle ETA" class="map-btn location-btn eta-btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
