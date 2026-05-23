@@ -1,6 +1,5 @@
 {
   "cleanUrls": true,
-  "outputDirectory": "mdr-tracker/dist",
   "rewrites": [
     { "source": "/src/adduser", "destination": "/src/adduser.html" },
     { "source": "/src/adduser/:path*", "destination": "/src/adduser.html" },

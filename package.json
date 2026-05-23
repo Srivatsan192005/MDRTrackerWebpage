@@ -7,6 +7,6 @@
     "mdr-tracker"
   ],
   "scripts": {
-    "build": "npm run build --workspace=mdr-tracker"
+    "build": "npm run build --workspace=mdr-tracker && cp -r mdr-tracker/dist dist"
   }
 }
