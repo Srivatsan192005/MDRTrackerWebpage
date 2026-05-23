@@ -2,6 +2,7 @@ services:
   - type: web
     name: mdr-vehicle-tracking
     runtime: static
+    rootDir: mdr-tracker
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     pullRequestPreviewsEnabled: false
