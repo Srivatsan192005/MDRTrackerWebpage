@@ -2,6 +2,7 @@
   "name": "mdr-tracker-root",
   "private": true,
   "version": "1.0.0",
+  "description": "MDR Vehicle Tracking Workspace",
   "workspaces": [
     "mdr-tracker"
   ],
