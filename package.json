@@ -1,0 +1,11 @@
+{
+  "name": "mdr-tracker-root",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "mdr-tracker"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=mdr-tracker"
+  }
+}

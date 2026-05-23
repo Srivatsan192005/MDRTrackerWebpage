@@ -1,8 +1,9 @@
 {
   "cleanUrls": true,
+  "outputDirectory": "mdr-tracker/dist",
   "rewrites": [
-    { "source": "/src/adduser", "destination": "/mdr-tracker/src/adduser.html" },
-    { "source": "/src/adduser/:path*", "destination": "/mdr-tracker/src/adduser.html" },
-    { "source": "/(.*)", "destination": "/mdr-tracker/index.html" }
+    { "source": "/src/adduser", "destination": "/src/adduser.html" },
+    { "source": "/src/adduser/:path*", "destination": "/src/adduser.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
