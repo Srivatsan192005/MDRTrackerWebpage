@@ -1,5 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+:root {
+  --primary-color: #0b3c75; /* Deep MDR Corporate Navy Blue */
+  --primary-light: #1656a2; /* Lighter Corporate Blue */
+  --primary-dark: #062348;  /* Darker Corporate Blue */
+  --accent-color: #9e1a1a;   /* Scientific Accent Deep Red */
+  
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #edf2f7 50%, #e2e8f0 100%);
+  --primary-gradient: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+  --hover-gradient: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+  --accent-gradient: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -24,7 +36,7 @@ body, html {
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background: var(--bg-gradient);
   position: relative;
   overflow-y: auto; /* Handle overflow within the login container only */
 }
@@ -92,7 +104,7 @@ body, html {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #374151, #111827);
+  background: var(--accent-gradient);
   transform: scaleX(0);
   transition: transform 0.3s ease;
   animation: slideIn 1s ease-out 0.5s forwards;
@@ -136,8 +148,8 @@ body, html {
 }
 
 .input-field:focus {
-  border-color: #374151;
-  box-shadow: 0 0 0 3px rgba(55, 65, 81, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(11, 60, 117, 0.15);
 }
 
 .input-field::placeholder {
@@ -166,17 +178,17 @@ body, html {
 }
 
 .eye-open {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%23374151" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>');
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%230b3c75" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>');
 }
 
 .eye-closed {
-  background-image: url('eye.png');
+  background-image: url('/eye.png');
 }
 
 .login-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #374151 0%, #111827 100%);
+  background: var(--primary-gradient);
   color: white;
   border: none;
   border-radius: 8px;
@@ -185,13 +197,13 @@ body, html {
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(11, 60, 117, 0.2);
 }
 
 .login-btn:hover {
-  background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%);
+  background: var(--hover-gradient);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 16px rgba(11, 60, 117, 0.3);
 }
 
 .login-btn:active {
@@ -316,7 +328,7 @@ body, html {
   flex-direction: column;
   align-items: center;
   padding: 40px 20px;
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background: var(--bg-gradient);
   position: relative;
   overflow-y: auto; /* Handle route listing overflow internally */
 }
@@ -358,7 +370,7 @@ body, html {
 }
 
 .add-user-btn {
-  background: linear-gradient(135deg, #374151 0%, #111827 100%);
+  background: var(--primary-gradient);
   color: white;
   border: none;
   border-radius: 8px;
@@ -367,7 +379,7 @@ body, html {
   transition: all 0.3s ease;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(11, 60, 117, 0.2);
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
@@ -375,9 +387,9 @@ body, html {
 }
 
 .add-user-btn:hover {
-  background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%);
+  background: var(--hover-gradient);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 16px rgba(11, 60, 117, 0.3);
 }
 
 .route-controls .logout-btn {
@@ -434,15 +446,15 @@ body, html {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #374151, #111827);
+  background: var(--accent-gradient);
   transform: scaleX(0);
   transition: transform 0.3s ease;
 }
 
 .route-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-  border-color: rgba(55, 65, 81, 0.4);
+  box-shadow: 0 20px 40px rgba(11, 60, 117, 0.12);
+  border-color: rgba(11, 60, 117, 0.4);
 }
 
 .route-card:hover::before {
@@ -497,8 +509,8 @@ body, html {
 }
 
 .status-offline {
-  background: #fed7d7;
-  color: #742a2a;
+  background: #fef2f2;
+  color: var(--accent-color);
 }
 
 /* ===== ADD USER PAGE ===== */
@@ -509,7 +521,7 @@ body, html {
   flex-direction: column;
   align-items: center;
   padding: 40px 20px;
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background: var(--bg-gradient);
   position: relative;
   overflow-y: auto; /* Allow scrolling between the Add form and the Manage list */
 }
@@ -590,8 +602,8 @@ body, html {
 
 .sidebar-header {
   padding: 24px;
-  border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #374151 0%, #111827 100%);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.1);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   color: white;
 }
 
@@ -646,9 +658,9 @@ body, html {
 }
 
 #sidebarBackButton {
-  background: #3b82f6 !important;
+  background: var(--primary-color) !important;
   color: white !important;
-  border-color: #3b82f6 !important;
+  border-color: var(--primary-color) !important;
 }
 
 #sidebarBackButton::before {
@@ -663,8 +675,8 @@ body, html {
 }
 
 #sidebarBackButton:hover {
-  background: #2563eb !important;
-  border-color: #2563eb !important;
+  background: var(--primary-light) !important;
+  border-color: var(--primary-light) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -778,7 +790,7 @@ body, html {
 
 .feedback-btn {
   width: 100%;
-  background: linear-gradient(135deg, #374151 0%, #111827 100%);
+  background: var(--primary-gradient);
   color: white;
   border: none;
   border-radius: 12px;
@@ -787,7 +799,7 @@ body, html {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(11, 60, 117, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -795,9 +807,9 @@ body, html {
 }
 
 .feedback-btn:hover {
-  background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%);
+  background: var(--hover-gradient);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(11, 60, 117, 0.3);
 }
 
 .feedback-btn:active {
@@ -1035,8 +1047,11 @@ body, html {
   display: none;
 }
 
-.sidebar.hidden ~ .toggle-sidebar {
-  display: block;
+/* Hide the sidebar toggle button on login, route selection, and add user pages */
+#loginPage:not([style*="display: none"]) ~ #trackingPage .toggle-sidebar,
+#routeSelectionPage:not([style*="display: none"]) ~ #trackingPage .toggle-sidebar,
+#addUserPage:not([style*="display: none"]) ~ #trackingPage .toggle-sidebar {
+  display: none !important;
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
@@ -1065,10 +1080,7 @@ body, html {
     flex: 1;
   }
   
-  .toggle-sidebar {
-    display: block;
-  }
-  
+
   .map-controls {
     bottom: 16px;
     right: 16px;
@@ -1173,10 +1185,10 @@ body, html {
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, #374151 0%, #111827 100%);
+  background: var(--primary-gradient);
   color: white;
-  border-color: #111827;
-  box-shadow: 0 6px 20px rgba(17, 24, 39, 0.25);
+  border-color: var(--primary-dark);
+  box-shadow: 0 6px 20px rgba(11, 60, 117, 0.25);
 }
 
 .tab-btn:hover:not(.active) {
@@ -1270,7 +1282,7 @@ body, html {
 
 .table-delete-btn {
   background: #fee2e2;
-  color: #991b1b;
+  color: var(--accent-color);
   border: 1px solid #fca5a5;
   padding: 8px 14px;
   border-radius: 8px;
@@ -1284,9 +1296,9 @@ body, html {
 }
 
 .table-delete-btn:hover {
-  background: #dc2626;
+  background: var(--accent-color);
   color: white;
-  border-color: #dc2626;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(158, 26, 26, 0.2);
   transform: translateY(-1px);
 }

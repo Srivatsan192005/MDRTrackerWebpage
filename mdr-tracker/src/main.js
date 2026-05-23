@@ -126,7 +126,7 @@ function showNotification(driverName, route) {
   if (Notification.permission === "granted") {
     new Notification(`${driverName} started trip`, {
       body: `Driver on route ${route} has started a trip`,
-      icon: "mdr_bus_icon.png"
+      icon: "/mdr_bus_icon.png"
     });
   }
 }
@@ -403,7 +403,7 @@ function showDriversForRoute(route) {
             map,
             position: pos,
             title: `${name} - ${driver.assignedVehicle || route}`,
-            icon: "mdr_bus_icon.png"
+            icon: "/mdr_bus_icon.png"
           });
           const infoWindow = new google.maps.InfoWindow({ content: infoContent });
           marker.addListener("click", () => infoWindow.open(map, marker));
@@ -744,7 +744,7 @@ function showDriversForVehicle(vehicleNumber) {
             map,
             position: pos,
             title: liveData.name || "Driver",
-            icon: "mdr_bus_icon.png"
+            icon: "/mdr_bus_icon.png"
           });
 
           const infoWindow = new google.maps.InfoWindow({
@@ -906,7 +906,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const togglePassword = document.getElementById('togglePassword');
   if (passwordInput && togglePassword) {
     // Set initial state - closed eye
-    togglePassword.style.backgroundImage = 'url("eye.png")';
+    togglePassword.style.backgroundImage = 'url("/eye.png")';
     togglePassword.style.backgroundSize = '18px 18px';
     togglePassword.style.backgroundRepeat = 'no-repeat';
     togglePassword.style.backgroundPosition = 'center';
@@ -925,7 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
     togglePassword.addEventListener('click', () => {
       const isPassword = passwordInput.type === 'password';
       passwordInput.type = isPassword ? 'text' : 'password';
-      togglePassword.style.backgroundImage = isPassword ? 'url("open.png")' : 'url("eye.png")';
+      togglePassword.style.backgroundImage = isPassword ? 'url("/open.png")' : 'url("/eye.png")';
       togglePassword.style.backgroundSize = '18px 18px';
       togglePassword.style.backgroundRepeat = 'no-repeat';
       togglePassword.style.backgroundPosition = 'center';
@@ -1180,7 +1180,7 @@ function activateETA() {
       map: map,
       title: "Your Location",
       icon: {
-        url: "current.png",
+        url: "/current.png",
         scaledSize: new google.maps.Size(24, 24),
         anchor: new google.maps.Point(12, 12)
       },
