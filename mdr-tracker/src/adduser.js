@@ -196,10 +196,10 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        togglePassword.style.backgroundImage = 'url("../open.png")';
+        togglePassword.style.backgroundImage = 'url("/open.png")';
       } else {
         passwordInput.type = 'password';
-        togglePassword.style.backgroundImage = 'url("../eye.png")';
+        togglePassword.style.backgroundImage = 'url("/eye.png")';
       }
     };
   }

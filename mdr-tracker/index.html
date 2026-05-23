@@ -6,13 +6,11 @@
     <title>MDR VEHICLE TRACKING</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6,Array.prototype.includes,Promise,Object.assign,fetch"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=%VITE_GOOGLE_MAPS_API_KEY%"></script>
 </head>
 <body>
     <div id="loginPage">
         <div class="login-header">
-            <img src="mdr.png" alt="MDR Logo" class="login-logo" />
+            <img src="/mdr.png" alt="MDR Logo" class="login-logo" />
         </div>
         
         <div class="login-container">
@@ -44,7 +42,7 @@
             
         </div>
         <div class="route-header">
-            <img src="mdr_monogram.png" alt="MDR Logo" class="route-logo" />
+            <img src="/mdr_monogram.png" alt="MDR Logo" class="route-logo" />
             <h3 class="route-title">Select a Route</h3>
             <p class="route-subtitle">Choose a route to track vehicles</p>
         </div>
@@ -53,7 +51,6 @@
     </div>
 
     <div id="trackingPage" style="display: none;">
-        <button id="toggleSidebarBtn" class="toggle-sidebar">☰</button>
         
         <div id="bar" class="sidebar">
             <div class="sidebar-header">
@@ -74,6 +71,8 @@
                 </div>
             </div>
         </div>
+
+        <button id="toggleSidebarBtn" class="toggle-sidebar">☰</button>
 
         <div class="map-container">
             <div id="map"></div>
