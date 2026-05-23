@@ -6,9 +6,9 @@
   --primary-dark: #062348;  /* Darker Corporate Blue */
   --accent-color: #9e1a1a;   /* Scientific Accent Deep Red */
   
-  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #edf2f7 50%, #e2e8f0 100%);
-  --primary-gradient: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
-  --hover-gradient: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+  --bg-gradient: radial-gradient(at 0% 0%, rgba(11, 60, 117, 0.07) 0px, transparent 55%), radial-gradient(at 50% 0%, rgba(158, 26, 26, 0.05) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(22, 86, 162, 0.07) 0px, transparent 55%), #f8fafc;
+  --primary-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  --hover-gradient: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
   --accent-gradient: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
 }
 
@@ -1301,4 +1301,177 @@ body, html {
   border-color: var(--accent-color);
   box-shadow: 0 4px 12px rgba(158, 26, 26, 0.2);
   transform: translateY(-1px);
+}
+
+/* ==========================================
+   ✨ PREMIUM TELEMETRY & GLOW ANIMATIONS ✨
+   ========================================== */
+
+/* 1. Live status pulsing badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-online::before {
+  background: #f59e0b;
+  animation: pulse-glow-amber 2s infinite ease-in-out;
+}
+
+.status-trip::before {
+  background: #10b981;
+  animation: pulse-glow-green 2s infinite ease-in-out;
+}
+
+@keyframes pulse-glow-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulse-glow-amber {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* 2. Glassmorphic Glossy Sweep Reflective Hover Effect */
+.route-card::after, .login-container::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(30deg);
+  transition: all 0.6s ease;
+  pointer-events: none;
+}
+
+.route-card:hover::after, .login-container:hover::after {
+  left: 130%;
+  transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* 3. Staggered Entrance Animations for Route Grid Cards */
+.routes-grid {
+  animation: fade-slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.route-card {
+  opacity: 0;
+  animation: card-appear 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.route-card:nth-child(1) { animation-delay: 0.05s; }
+.route-card:nth-child(2) { animation-delay: 0.1s; }
+.route-card:nth-child(3) { animation-delay: 0.15s; }
+.route-card:nth-child(4) { animation-delay: 0.2s; }
+.route-card:nth-child(5) { animation-delay: 0.25s; }
+.route-card:nth-child(6) { animation-delay: 0.3s; }
+
+@keyframes fade-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-appear {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 4. Speedometer Glow Ring Animation */
+#speedCircle {
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 0 rgba(11, 60, 117, 0.35);
+  animation: speed-glow-pulse 2.2s infinite ease-in-out;
+}
+
+@keyframes speed-glow-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(11, 60, 117, 0.35); }
+  70% { box-shadow: 0 0 0 10px rgba(11, 60, 117, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(11, 60, 117, 0); }
+}
+
+/* 5. Faded Half-Blueish and Half-Reddish Split Gradient for Login Page (Matches Brand Logo Colors) */
+#loginPage {
+  background: linear-gradient(135deg, 
+    rgba(11, 60, 117, 0.16) 0%, 
+    rgba(248, 250, 252, 0.75) 45%, 
+    rgba(248, 250, 252, 0.75) 55%, 
+    rgba(158, 26, 26, 0.13) 100%
+  );
+  background-size: 100% 100%;
+}
+
+@keyframes telemetry-bg-move {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 6. Brand Theme Wash for Cards & Sidebar (Soft Blue/Red Split Gradient) */
+.login-container, .route-card, .table-container, .sidebar, .driver-card {
+  background: linear-gradient(135deg, 
+    rgba(11, 60, 117, 0.05) 0%, 
+    rgba(255, 255, 255, 0.94) 50%, 
+    rgba(158, 26, 26, 0.04) 100%
+  ) !important;
+}
+
+.login-container, .route-card, .table-container, .driver-card {
+  border: 1px solid rgba(11, 60, 117, 0.15) !important;
+}
+
+/* 7. Brand Wash for Inactive Tabs */
+.tab-btn:not(.active) {
+  background: linear-gradient(135deg, 
+    rgba(11, 60, 117, 0.03) 0%, 
+    rgba(255, 255, 255, 0.9) 50%, 
+    rgba(158, 26, 26, 0.03) 100%
+  ) !important;
+  border: 1.5px solid rgba(11, 60, 117, 0.1) !important;
+}
+
+/* 8. Table Corporate Color Theme Integration */
+.user-table th {
+  background: rgba(11, 60, 117, 0.08) !important; /* Soft corporate blue header background */
+  color: var(--primary-color) !important;
+  border-bottom: 2px solid rgba(11, 60, 117, 0.2) !important;
+}
+
+.user-table tr:hover td {
+  background: rgba(158, 26, 26, 0.04) !important; /* Soft corporate red hover background */
+}
+
+/* 9. Enlight (Brighten) and Polish the Driver Name Bar inside Route Cards */
+.driver-status {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.25s ease !important;
+}
+
+.driver-status:hover {
+  background: #ffffff !important;
+  border-color: rgba(11, 60, 117, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(11, 60, 117, 0.06) !important;
+  transform: translateY(-1px) !important;
 }
