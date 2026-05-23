@@ -1475,3 +1475,108 @@ body, html {
   box-shadow: 0 4px 12px rgba(11, 60, 117, 0.06) !important;
   transform: translateY(-1px) !important;
 }
+
+/* ==========================================
+   📱 MOBILE & TABLET RESPONSIVENESS OVERRIDES 📱
+   ========================================== */
+
+@media (max-width: 768px) {
+  /* 1. Map Sidebar Overlap & Width Fix for Mobile */
+  .sidebar {
+    width: 100vw !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100%;
+    z-index: 250 !important;
+  }
+  
+  /* 2. Top corner Map Controls spacing */
+  .toggle-sidebar {
+    top: 12px !important;
+    left: 12px !important;
+    width: 40px !important;
+    height: 40px !important;
+    padding: 8px !important;
+  }
+  
+  .top-right-controls, .route-controls {
+    top: 12px !important;
+    right: 12px !important;
+  }
+  
+  .top-btn, .route-controls .logout-btn {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 8px !important;
+  }
+
+  /* 3. User Management Dashboard - Table Compact spacing for mobile */
+  .table-container {
+    padding: 16px !important;
+    border-radius: 12px !important;
+    margin: 8px !important;
+    width: calc(100% - 16px) !important;
+  }
+
+  .user-table th, .user-table td {
+    padding: 10px 8px !important;
+    font-size: 12px !important;
+  }
+  
+  .role-badge {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+  }
+
+  .table-delete-btn {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    gap: 2px !important;
+  }
+
+  /* 4. Tab system responsive wrap */
+  .tabs-container {
+    flex-direction: row !important;
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+
+  .tab-btn {
+    padding: 10px 14px !important;
+    font-size: 12px !important;
+    flex: 1 !important;
+    text-align: center !important;
+  }
+  
+  /* 5. Route select grid fit on small viewports */
+  .routes-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 16px !important;
+    padding: 0 12px !important;
+  }
+
+  .route-card {
+    padding: 24px 20px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 6. Extra small mobile padding fixes */
+  .login-logo {
+    width: 280px !important;
+  }
+  
+  .route-logo {
+    width: 140px !important;
+  }
+  
+  .route-title {
+    font-size: 24px !important;
+  }
+  
+  .route-header {
+    margin-bottom: 24px !important;
+  }
+}
