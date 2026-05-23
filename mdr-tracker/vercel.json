@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/src/adduser", "destination": "/src/adduser.html" },
+    { "source": "/src/adduser/:path*", "destination": "/src/adduser.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

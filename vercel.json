@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/src/adduser", "destination": "/mdr-tracker/src/adduser.html" },
+    { "source": "/src/adduser/:path*", "destination": "/mdr-tracker/src/adduser.html" },
+    { "source": "/(.*)", "destination": "/mdr-tracker/index.html" }
+  ]
+}
