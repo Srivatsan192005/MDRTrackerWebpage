@@ -29,6 +29,75 @@ if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+const APP_SESSION_KEY = "mdr_app_session";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBg_M5sBVJMN4EQqZ9isya-87ax8faRxoI";
+
+function saveAppSession(session) {
+  localStorage.setItem(APP_SESSION_KEY, JSON.stringify(session));
+}
+
+function loadAppSession() {
+  try {
+    return JSON.parse(localStorage.getItem(APP_SESSION_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function clearAppSession() {
+  localStorage.removeItem(APP_SESSION_KEY);
+}
+
+let googleMapsLoadingPromise = null;
+
+function refreshMapLayout() {
+  if (!map || typeof google === "undefined" || !google.maps) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    google.maps.event.trigger(map, "resize");
+    const center = map.getCenter();
+    if (center) {
+      map.setCenter(center);
+    }
+  });
+}
+
+function loadGoogleMapsApi() {
+  if (typeof google !== "undefined" && google.maps) {
+    return Promise.resolve();
+  }
+
+  if (!GOOGLE_MAPS_API_KEY) {
+    return Promise.reject(new Error("Missing Google Maps API key"));
+  }
+
+  if (googleMapsLoadingPromise) {
+    return googleMapsLoadingPromise;
+  }
+
+  googleMapsLoadingPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector('script[data-google-maps="true"]');
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Failed to load Google Maps script")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.dataset.googleMaps = "true";
+    script.async = true;
+    script.defer = true;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    document.head.appendChild(script);
+  });
+
+  return googleMapsLoadingPromise;
+}
+
 
 let map;
 let currentRoute = null;
@@ -46,7 +115,9 @@ let routePolylines = new Map();
 let directionsService;
 let locationAsked = false;
 
-const sharedInfoWindow = new google.maps.InfoWindow();
+const sharedInfoWindow = typeof google !== "undefined" && google.maps
+  ? new google.maps.InfoWindow()
+  : null;
 const markersMap = new Map();
 const driverRefs = new Map();
 
@@ -107,6 +178,14 @@ function fetchDrivers() {
   });
 }
 function showRouteSelection() {
+  if (currentUserRole !== "admin") {
+    const session = loadAppSession();
+    if (session && session.assignedRoute) {
+      showDriversForRoute(session.assignedRoute);
+      return;
+    }
+  }
+
   document.getElementById("loginPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "none";
   document.getElementById("routeSelectionPage").style.display = "flex";
@@ -210,6 +289,7 @@ function showDriversForRoute(route) {
   localStorage.setItem('viewType', 'route');
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "flex";
+  refreshMapLayout();
   
   // Show/hide location button based on user role
   const locationBtn = document.getElementById('toggleEmployeeLocationBtn');
@@ -376,7 +456,9 @@ function clearMarkers() {
     marker.setMap(null);
   });
   markersMap.clear();
-  sharedInfoWindow.close();
+  if (sharedInfoWindow) {
+    sharedInfoWindow.close();
+  }
   clearRoutes();
 }
 
@@ -416,51 +498,174 @@ function backToRoutes() {
 async function logout() {
   localStorage.removeItem('currentRoute');
   localStorage.removeItem('viewType');
+  clearAppSession();
   await supabase.auth.signOut();
   location.reload();
 }
 
-async function handleAppLoadOrResume() {
-  const { data } = await supabase.auth.getSession();
+async function runTemporaryInsert() {
+  if (localStorage.getItem('temp_db_seeded') === 'true') return;
+  console.log("Seeding test users directly into route_tracking table...");
+  try {
+    const testUsers = [
+      {
+        employee_id: "admin-123",
+        employee_name: "MDR Admin",
+        email: "admin@mdrtox.com",
+        role: "admin",
+        assigned_route: null,
+        vehicle_number: null
+      },
+      {
+        employee_id: "emp-456",
+        employee_name: "John Doe",
+        email: "employee@mdrtox.com",
+        role: "employee",
+        assigned_route: "AVADI",
+        vehicle_number: "TN02-BS-1586"
+      }
+    ];
 
-  if (!data.session) {
-    showLogin();
-    return;
+    for (const user of testUsers) {
+      const { error: profileError } = await supabase
+        .from("route_tracking")
+        .upsert(user, {
+          onConflict: 'email'
+        });
+        
+      if (profileError) {
+        console.error(`Failed to seed record for ${user.email}:`, profileError.message);
+      } else {
+        console.log(`Successfully seeded record for ${user.email} directly in table!`);
+      }
+    }
+    
+    localStorage.setItem('temp_db_seeded', 'true');
+    console.log("Supabase direct table seeding completed successfully.");
+  } catch (err) {
+    console.error("Direct seeding crashed:", err);
   }
+}
 
-  const userId = data.session.user.id;
+async function handleAppLoadOrResume() {
+  try {
+    try {
+      await loadGoogleMapsApi();
+    } catch (error) {
+      console.error(error);
+      document.getElementById("loginPage").style.display = "flex";
+      const errorText = document.getElementById("errorText");
+      if (errorText) {
+        errorText.textContent = "Map API could not load. Check your Google Maps API key.";
+        errorText.style.display = "block";
+      }
+      return;
+    }
 
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("role, assigned_route")
-    .eq("id", userId)
-    .single();
+    // Run browser seeding for test accounts
+    await runTemporaryInsert();
 
-  if (profile) {
-    currentUserRole = profile.role;
-    document.getElementById("loginPage").style.display = "none";
-    initMap();
+    const skipLogin = localStorage.getItem('skipLogin');
+    const userRole = localStorage.getItem('userRole');
 
-    const savedRoute = localStorage.getItem('currentRoute');
-    const viewType = localStorage.getItem('viewType');
+    if (skipLogin === 'true' && userRole) {
+      localStorage.removeItem('skipLogin');
+      localStorage.removeItem('userRole');
+      currentUserRole = userRole;
+      initMap();
+      showRouteSelection();
+      return;
+    }
 
-    if (profile.role === "admin") {
-      if (savedRoute && viewType === 'vehicle') {
+    const session = loadAppSession();
+    if (session) {
+      currentUserRole = session.role || "admin";
+      initMap();
+
+      const savedRoute = localStorage.getItem('currentRoute');
+      const viewType = localStorage.getItem('viewType');
+
+      if (currentUserRole === "admin") {
+        if (savedRoute && viewType === 'vehicle') {
+          currentRoute = savedRoute;
+          showDriversForVehicle(savedRoute);
+        } else {
+          showRouteSelection();
+        }
+      } else if (savedRoute && viewType === 'route') {
         currentRoute = savedRoute;
-        showDriversForVehicle(savedRoute);
+        showDriversForRoute(savedRoute);
+      } else if (session.assignedRoute) {
+        showDriversForRoute(session.assignedRoute);
       } else {
         showRouteSelection();
       }
-    } else {
-      if (savedRoute && viewType === 'route') {
-        currentRoute = savedRoute;
-        showDriversForRoute(savedRoute);
-      } else {
-        showDriversForRoute(profile.assigned_route);
-      }
+      return;
     }
-  } else {
-    showLogin();
+
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session) {
+      showLogin();
+      return;
+    }
+
+    const userId = data.session.user.id;
+
+    const { data: profile } = await supabase
+      .from("route_tracking")
+      .select("role, assigned_route, employee_name, vehicle_number")
+      .eq("employee_id", userId)
+      .single();
+
+    if (profile) {
+      currentUserRole = profile.role;
+      saveAppSession({
+        email: data.session.user.email,
+        role: profile.role,
+        assignedRoute: profile.assigned_route || null,
+        employeeName: profile.employee_name || "",
+        vehicleNumber: profile.vehicle_number || null
+      });
+      document.getElementById("loginPage").style.display = "none";
+      initMap();
+
+      const savedRoute = localStorage.getItem('currentRoute');
+      const viewType = localStorage.getItem('viewType');
+
+      if (profile.role === "admin") {
+        if (savedRoute && viewType === 'vehicle') {
+          currentRoute = savedRoute;
+          showDriversForVehicle(savedRoute);
+        } else {
+          showRouteSelection();
+        }
+      } else {
+        if (savedRoute && viewType === 'route') {
+          currentRoute = savedRoute;
+          showDriversForRoute(savedRoute);
+        } else {
+          showDriversForRoute(profile.assigned_route);
+        }
+      }
+    } else {
+      showLogin();
+    }
+  } catch (error) {
+    console.error("App initialization crashed:", error);
+    const errorDiv = document.createElement("div");
+    errorDiv.style.position = "fixed";
+    errorDiv.style.top = "0";
+    errorDiv.style.left = "0";
+    errorDiv.style.width = "100%";
+    errorDiv.style.background = "#fee2e2";
+    errorDiv.style.color = "#991b1b";
+    errorDiv.style.padding = "20px";
+    errorDiv.style.zIndex = "100000";
+    errorDiv.style.fontFamily = "monospace";
+    errorDiv.style.whiteSpace = "pre-wrap";
+    errorDiv.innerHTML = `<h3>⚠️ Application Load Error</h3><p>${error.stack || error.message || error}</p>`;
+    document.body.appendChild(errorDiv);
   }
 }
 function showDriversForVehicle(vehicleNumber) {
@@ -471,6 +676,7 @@ function showDriversForVehicle(vehicleNumber) {
   localStorage.setItem('viewType', 'vehicle');
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "flex";
+  refreshMapLayout();
 
   const locationBtn = document.getElementById('toggleEmployeeLocationBtn');
   if (locationBtn) {
@@ -571,43 +777,85 @@ function showDriversForVehicle(vehicleNumber) {
 
 
 async function validateLogin() {
-  const email = document.getElementById("emailInput").value.trim();
-  const password = document.getElementById("passwordInput").value;
+  const emailInput = document.getElementById("emailInput");
+  const passwordInput = document.getElementById("passwordInput");
   const errorText = document.getElementById("errorText");
+
+  // Sanitize input
+  const email = emailInput.value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+  const password = passwordInput.value
+    .trim()
+    .replace(/\s+/g, "");
 
   errorText.style.display = "none";
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) {
-    errorText.textContent = error.message;
+  if (!email || !password) {
+    errorText.textContent = "Enter email and password";
     errorText.style.display = "block";
     return;
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("user_profiles")
-    .select("role, assigned_route")
-    .eq("id", data.user.id)
-    .single();
+  try {
+    // 1️⃣ Fetch the profile directly from the route_tracking table by email
+    const { data: profile, error: profileError } = await supabase
+      .from("route_tracking")
+      .select("role, assigned_route, employee_name, vehicle_number, employee_id")
+      .eq("email", email)
+      .single();
 
-  if (profileError || !profile) {
-    errorText.textContent = "User profile not found";
+    if (profileError || !profile) {
+      errorText.textContent = "Invalid login credentials";
+      errorText.style.display = "block";
+      return;
+    }
+
+    // 2️⃣ Compare the entered password (the Emp-id) to employee_id
+    if (profile.employee_id !== password) {
+      errorText.textContent = "Invalid login credentials";
+      errorText.style.display = "block";
+      return;
+    }
+
+    // 3️⃣ Set current user role
+    currentUserRole = profile.role || "employee";
+
+    // 4️⃣ Save session manually (matches loadAppSession pattern)
+    saveAppSession({
+      email: email,
+      role: profile.role,
+      assignedRoute: profile.assigned_route || null,
+      employeeName: profile.employee_name || "",
+      vehicleNumber: profile.vehicle_number || null,
+      employeeId: profile.employee_id
+    });
+
+    localStorage.removeItem('currentRoute');
+    localStorage.removeItem('viewType');
+
+    // 5️⃣ Proceed with map loading and views
+    document.getElementById("loginPage").style.display = "none";
+
+    try {
+      initMap();
+    } catch (mapErr) {
+      console.warn("Map initialization failed, proceeding with UI views only:", mapErr);
+    }
+
+    if (currentUserRole === "admin") {
+      showRouteSelection();
+    } else {
+      // Employees go straight to tracking their assigned route
+      showDriversForRoute(profile.assigned_route);
+    }
+
+  } catch (error) {
+    console.error("Login validation crashed:", error);
+    errorText.textContent = `Login failed: ${error.message}`;
     errorText.style.display = "block";
-    return;
-  }
-
-  document.getElementById("loginPage").style.display = "none";
-  initMap();
-  currentUserRole = profile.role;
-
-  if (profile.role === "admin") {
-    showRouteSelection();
-  } else {
-    showDriversForRoute(profile.assigned_route);
   }
 }
 

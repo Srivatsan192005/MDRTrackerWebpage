@@ -12,19 +12,21 @@ body, html {
   color: #1f2937;
   height: 100%;
   width: 100%;
-  overflow-x: hidden;
+  overflow: hidden; /* Lock the global body scrollbar */
 }
 
 /* ===== VEHICLE TRACKING LOGIN ===== */
 #loginPage {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 50%, #e5e7eb 100%);
   position: relative;
+  overflow-y: auto; /* Handle overflow within the login container only */
 }
 
 .login-header {
@@ -309,12 +311,14 @@ body, html {
 /* ===== ROUTE SELECTION PAGE ===== */
 #routeSelectionPage {
   display: none;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   flex-direction: column;
   align-items: center;
   padding: 40px 20px;
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 50%, #e5e7eb 100%);
   position: relative;
+  overflow-y: auto; /* Handle route listing overflow internally */
 }
 
 .route-header {
@@ -500,13 +504,14 @@ body, html {
 /* ===== ADD USER PAGE ===== */
 #addUserPage {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: 40px 20px;
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 50%, #e5e7eb 100%);
   position: relative;
+  overflow-y: auto; /* Allow scrolling between the Add form and the Manage list */
 }
 
 #addUserPage .login-container {
@@ -551,8 +556,10 @@ body, html {
 #trackingPage {
   display: none;
   height: 100vh;
+  width: 100vw;
   flex-direction: row;
   background: #ffffff;
+  overflow: hidden; /* Lock viewport and prevent nested page scrolling */
 }
 
 .sidebar {
@@ -1138,4 +1145,148 @@ body, html {
 
 .h-full {
   height: 100%;
+}
+
+/* ===== TAB SYSTEM FOR USER MANAGEMENT ===== */
+.tabs-container {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 950px;
+  justify-content: center;
+  z-index: 10;
+}
+
+.tab-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(226, 232, 240, 0.8);
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #374151 0%, #111827 100%);
+  color: white;
+  border-color: #111827;
+  box-shadow: 0 6px 20px rgba(17, 24, 39, 0.25);
+}
+
+.tab-btn:hover:not(.active) {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1f2937;
+  transform: translateY(-1px);
+}
+
+.tab-content {
+  width: 100%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tab-content.active {
+  display: flex;
+}
+
+/* ===== PREMIUM USER TABLE ===== */
+.table-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 32px;
+  border: 1px solid rgba(209, 213, 219, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 950px;
+  overflow: hidden;
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.user-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 16px 20px;
+  border-bottom: 2px solid #e2e8f0;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.user-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+  font-weight: 500;
+}
+
+.user-table tr:hover td {
+  background: #f8fafc;
+}
+
+.user-table tr:last-child td {
+  border-bottom: none;
+}
+
+.role-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.role-admin {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.role-employee {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.table-delete-btn {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.table-delete-btn:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  transform: translateY(-1px);
 }
