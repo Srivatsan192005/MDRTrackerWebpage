@@ -308,13 +308,23 @@ function showDriversForRoute(route) {
   
   console.log('Filtering drivers for route:', route);
   console.log('All drivers:', allDrivers.map(d => ({ id: d.id, name: d.name, vehicle: d.assignedVehicle, route: d.assignedRoute })));
+
+  const session = loadAppSession();
+  const employeeVehicleNumber = currentUserRole === "employee"
+    ? (session?.vehicleNumber || "")
+    : "";
   
   const filtered = allDrivers.filter(d => {
     const driverRoute = (d.assignedRoute || '').trim().toUpperCase();
+    const driverVehicle = (d.assignedVehicle || '').trim().toUpperCase();
     const searchRoute = (route || '').trim().toUpperCase();
     
     if (searchRoute.includes('MARUTI SWIFT') && searchRoute.includes('TN02-BS-1586')) {
       return d.assignedVehicle && d.assignedVehicle.toUpperCase().includes('TN02-BS-1586');
+    }
+
+    if (employeeVehicleNumber) {
+      return driverRoute === searchRoute && driverVehicle === employeeVehicleNumber.trim().toUpperCase();
     }
     
     return driverRoute === searchRoute;
@@ -362,6 +372,10 @@ function showDriversForRoute(route) {
         <div class="driver-status">
           <span class="driver-name">${name}</span>
           <span class="status-badge ${statusClass}">${status}</span>
+        </div>
+        <div class="driver-meta">
+          Route: ${driver.assignedRoute || route}<br>
+          Vehicle: ${driver.assignedVehicle || "Not assigned"}
         </div>
       `;
 
@@ -644,6 +658,8 @@ async function handleAppLoadOrResume() {
         if (savedRoute && viewType === 'route') {
           currentRoute = savedRoute;
           showDriversForRoute(savedRoute);
+        } else if (profile.assigned_route) {
+          showDriversForRoute(profile.assigned_route);
         } else {
           showDriversForRoute(profile.assigned_route);
         }
@@ -740,7 +756,7 @@ function showDriversForVehicle(vehicleNumber) {
         };
 
         if (!markersMap.has(driver.id)) {
-          const marker = new google.maps.Marker({
+          const vehicleMarker = new google.maps.Marker({
             map,
             position: pos,
             title: liveData.name || "Driver",
@@ -751,13 +767,15 @@ function showDriversForVehicle(vehicleNumber) {
             content: `<b>${liveData.name}</b><br>Vehicle: ${vehicleNumber}`
           });
 
-          marker.addListener("click", () => infoWindow.open(map, marker));
-          marker.infoWindow = infoWindow;
+          vehicleMarker.addListener("click", () => infoWindow.open(map, vehicleMarker));
+          vehicleMarker.infoWindow = infoWindow;
 
-          markersMap.set(driver.id, marker);
+          markersMap.set(driver.id, vehicleMarker);
         } else {
           markersMap.get(driver.id).setPosition(pos);
         }
+
+        marker = markersMap.get(driver.id);
 
         bounds.extend(pos);
         if (!userZoomed) {
@@ -860,13 +878,7 @@ async function validateLogin() {
 }
 
 function showMapForRoute(routeId) {
-  // Admin clicks vehicle, so filter by vehicle
-  if (currentUserRole === "admin") {
-    showDriversForVehicle(routeId);
-  } else {
-    // Employee uses route
-    showDriversForRoute(routeId);
-  }
+  showDriversForVehicle(routeId);
 }
 
 function toggleSidebar() {
@@ -966,8 +978,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const zoomBtn = document.getElementById("zoomToVehicleBtn");
   if (zoomBtn) {
     zoomBtn.addEventListener("click", () => {
-      if (marker) {
-        map.setCenter(marker.getPosition());
+      const zoomTarget = marker || markersMap.values().next().value;
+      if (zoomTarget?.getPosition) {
+        map.setCenter(zoomTarget.getPosition());
         map.setZoom(18);
       } else {
         alert("Vehicle location not available.");

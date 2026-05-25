@@ -327,7 +327,7 @@ body, html {
   width: 100vw;
   flex-direction: column;
   align-items: center;
-  padding: 40px 20px;
+  padding: 92px 20px 40px;
   background: var(--bg-gradient);
   position: relative;
   overflow-y: auto; /* Handle route listing overflow internally */
@@ -335,8 +335,10 @@ body, html {
 
 .route-header {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 36px;
   position: relative;
+  width: 100%;
+  max-width: 1200px;
 }
 
 .route-logo {
@@ -366,6 +368,7 @@ body, html {
   right: 20px;
   z-index: 200;
   display: flex;
+  align-items: center;
   gap: 12px;
 }
 
@@ -424,6 +427,8 @@ body, html {
   gap: 24px;
   max-width: 1200px;
   width: 100%;
+  margin: 0 auto;
+  justify-items: stretch;
 }
 
 .route-card {
@@ -589,6 +594,11 @@ body, html {
   transform: translateX(-100%);
 }
 
+#bar:not(.hidden) ~ .map-container #speedCircle,
+#bar:not(.hidden) ~ .map-container #etaDisplay {
+  display: none !important;
+}
+
 /* Ensure sidebar buttons remain accessible */
 .sidebar-header {
   position: relative;
@@ -642,8 +652,8 @@ body, html {
 }
 
 #sidebarBackButton, #sidebarLogoutButton {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border: 2px solid #e2e8f0 !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
   border-radius: 8px !important;
   padding: 8px !important;
   cursor: pointer !important;
@@ -653,14 +663,15 @@ body, html {
   width: 36px !important;
   height: 36px !important;
   font-size: 16px !important;
-  color: #374151 !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
+  backdrop-filter: blur(12px);
 }
 
 #sidebarBackButton {
-  background: var(--primary-color) !important;
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%) !important;
   color: white !important;
-  border-color: var(--primary-color) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
 }
 
 #sidebarBackButton::before {
@@ -671,7 +682,7 @@ body, html {
 
 #sidebarLogoutButton::before {
   content: '⏻' !important;
-  color: black !important;
+  color: white !important;
 }
 
 #sidebarBackButton:hover {
@@ -681,7 +692,7 @@ body, html {
 }
 
 #sidebarLogoutButton:hover {
-  background: rgba(255, 255, 255, 1) !important;
+  background: rgba(255, 255, 255, 0.2) !important;
   transform: translateY(-1px) !important;
 }
 .action-btn.back-btn::before {
@@ -785,12 +796,12 @@ body, html {
 .sidebar-footer {
   margin-top: auto;
   padding: 20px 0;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .feedback-btn {
   width: 100%;
-  background: var(--primary-gradient);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 72%, var(--accent-color) 100%);
   color: white;
   border: none;
   border-radius: 12px;
@@ -799,15 +810,16 @@ body, html {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(11, 60, 117, 0.2);
+  box-shadow: 0 10px 24px rgba(11, 60, 117, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .feedback-btn:hover {
-  background: var(--hover-gradient);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 72%, var(--accent-color) 100%);
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(11, 60, 117, 0.3);
 }
@@ -821,16 +833,17 @@ body, html {
 }
 
 .driver-card {
-  background: #f7fafc;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(11, 60, 117, 0.12);
   transition: all 0.3s ease;
 }
 
 .driver-card:hover {
-  background: #edf2f7;
+  background: rgba(255, 255, 255, 0.92);
   transform: translateX(4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -1059,10 +1072,38 @@ body, html {
   .routes-grid {
     grid-template-columns: 1fr;
     gap: 16px;
+    max-width: 100%;
+    padding: 0 8px;
   }
   
   .route-card {
     padding: 24px 20px;
+  }
+
+  #routeSelectionPage {
+    padding: 84px 14px 28px;
+  }
+
+  .route-header {
+    margin-bottom: 28px;
+  }
+
+  .route-controls {
+    top: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .add-user-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+    height: 40px;
+  }
+
+  .route-controls .logout-btn {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
   }
   
   #trackingPage {
@@ -1397,11 +1438,42 @@ body, html {
 }
 
 /* 4. Speedometer Glow Ring Animation */
+#speedCircle.speed-indicator {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: none;
+  min-width: 128px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 60, 117, 0.22);
+  background: linear-gradient(135deg, rgba(11, 60, 117, 0.95) 0%, rgba(6, 35, 72, 0.94) 55%, rgba(158, 26, 26, 0.88) 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 18px 36px rgba(11, 60, 117, 0.26), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  backdrop-filter: blur(14px);
+  align-items: center;
+  justify-content: center;
+}
+
 #speedCircle {
   position: relative;
   transition: all 0.3s ease;
   box-shadow: 0 0 0 0 rgba(11, 60, 117, 0.35);
   animation: speed-glow-pulse 2.2s infinite ease-in-out;
+}
+
+@media (max-width: 768px) {
+  #speedCircle.speed-indicator {
+    bottom: 88px;
+    min-width: 116px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
 }
 
 @keyframes speed-glow-pulse {
@@ -1483,13 +1555,52 @@ body, html {
 @media (max-width: 768px) {
   /* 1. Map Sidebar Overlap & Width Fix for Mobile */
   .sidebar {
-    width: 100vw !important;
+    width: min(86vw, 340px) !important;
     position: fixed !important;
     top: 0;
     left: 0;
     bottom: 0;
-    height: 100%;
-    z-index: 250 !important;
+    height: 100vh;
+    z-index: 180 !important;
+    border-right: 1px solid rgba(11, 60, 117, 0.14);
+    border-bottom: none;
+    border-top-right-radius: 24px;
+    border-bottom-right-radius: 24px;
+    background: linear-gradient(135deg, rgba(11, 60, 117, 0.98) 0%, rgba(248, 250, 252, 0.98) 56%, rgba(158, 26, 26, 0.07) 100%);
+    backdrop-filter: blur(18px);
+    box-shadow: 8px 0 28px rgba(11, 60, 117, 0.18);
+    overflow: hidden;
+  }
+
+  .sidebar.hidden {
+    transform: translateX(calc(-100% - 20px));
+  }
+
+  #trackingPage {
+    position: relative;
+  }
+
+  .map-container {
+    width: 100vw;
+    height: 100vh;
+    flex: 1 1 auto;
+  }
+
+  .drivers-container {
+    padding: 18px 16px !important;
+  }
+
+  .driver-card {
+    padding: 18px 16px !important;
+    border-radius: 18px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .driver-meta {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #475569;
   }
   
   /* 2. Top corner Map Controls spacing */
@@ -1536,6 +1647,19 @@ body, html {
     gap: 2px !important;
   }
 
+  .sidebar-header {
+    padding: 18px 16px;
+  }
+
+  .route-info {
+    font-size: 16px;
+  }
+
+  .feedback-btn {
+    padding: 14px 16px;
+    border-radius: 14px;
+  }
+
   /* 4. Tab system responsive wrap */
   .tabs-container {
     flex-direction: row !important;
@@ -1578,5 +1702,42 @@ body, html {
   
   .route-header {
     margin-bottom: 24px !important;
+  }
+
+  .route-subtitle {
+    font-size: 14px;
+  }
+
+  .route-logo {
+    width: 120px !important;
+    margin-bottom: 16px;
+  }
+
+  .sidebar {
+    width: min(90vw, 320px) !important;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+  }
+
+  .drivers-container {
+    padding: 14px 12px !important;
+  }
+
+  .driver-card {
+    padding: 16px 14px !important;
+  }
+
+  .driver-name {
+    font-size: 16px;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .map-controls {
+    right: 12px;
+    bottom: 12px;
   }
 }
