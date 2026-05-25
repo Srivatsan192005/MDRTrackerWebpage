@@ -8,6 +8,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let allUsers = [];
 
 async function createUser() {
   const employeeName = document.getElementById("newEmployeeName").value.trim();
@@ -89,45 +90,80 @@ async function fetchAndDisplayUsers() {
       return;
     }
 
-    if (!users || users.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #6b7280; padding: 20px;">No existing users found.</td></tr>`;
-      return;
+    allUsers = users || [];
+    
+    // Check if there is an active search filter to apply
+    const searchInput = document.getElementById("userSearchInput");
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
+    
+    if (searchTerm) {
+      filterAndRenderUsers(searchTerm);
+    } else {
+      renderUserTable(allUsers);
     }
-
-    tbody.innerHTML = "";
-    users.forEach(user => {
-      const tr = document.createElement("tr");
-      const isAdmin = user.role === 'admin';
-
-      tr.innerHTML = `
-        <td style="font-weight: 600; color: #1e293b;">${user.employee_name}</td>
-        <td style="color: #475569;">${user.email}</td>
-        <td><span class="role-badge role-${user.role}">${user.role}</span></td>
-        <td>${user.assigned_route || '<span style="color:#94a3b8; font-style:italic;">None</span>'}</td>
-        <td>${user.vehicle_number || '<span style="color:#94a3b8; font-style:italic;">None</span>'}</td>
-        <td>
-          ${isAdmin 
-            ? '<span style="color: #94a3b8; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 4px;">🔒 Protected</span>' 
-            : `<button class="table-delete-btn" data-id="${user.employee_id}">🗑️ Remove</button>`
-          }
-        </td>
-      `;
-
-      // Only attach event listener and allow deletion if they are not an admin
-      if (!isAdmin) {
-        const deleteBtn = tr.querySelector(".table-delete-btn");
-        if (deleteBtn) {
-          deleteBtn.onclick = () => removeUser(user.employee_id, user.employee_name);
-        }
-      }
-
-      tbody.appendChild(tr);
-    });
 
   } catch (error) {
     console.error("Error fetching users:", error);
     tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #dc2626; padding: 20px;">Failed to load user list.</td></tr>`;
   }
+}
+
+function renderUserTable(usersToRender) {
+  const tbody = document.getElementById("userTableBody");
+  if (!tbody) return;
+
+  if (!usersToRender || usersToRender.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #6b7280; padding: 20px;">No users found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = "";
+  usersToRender.forEach(user => {
+    const tr = document.createElement("tr");
+    const isAdmin = user.role === 'admin';
+
+    tr.innerHTML = `
+      <td data-label="Name" style="font-weight: 600; color: #1e293b;">${user.employee_name}</td>
+      <td data-label="Email" style="color: #475569;">${user.email}</td>
+      <td data-label="Role"><span class="role-badge role-${user.role}">${user.role}</span></td>
+      <td data-label="Assigned Route">${user.assigned_route || '<span style="color:#94a3b8; font-style:italic;">None</span>'}</td>
+      <td data-label="Vehicle Number">${user.vehicle_number || '<span style="color:#94a3b8; font-style:italic;">None</span>'}</td>
+      <td data-label="Action">
+        ${isAdmin 
+          ? '<span style="color: #94a3b8; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: #f1f5f9; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 4px;">🔒 Protected</span>' 
+          : `<button class="table-delete-btn" data-id="${user.employee_id}">🗑️ Remove</button>`
+        }
+      </td>
+    `;
+
+    // Only attach event listener and allow deletion if they are not an admin
+    if (!isAdmin) {
+      const deleteBtn = tr.querySelector(".table-delete-btn");
+      if (deleteBtn) {
+        deleteBtn.onclick = () => removeUser(user.employee_id, user.employee_name);
+      }
+    }
+
+    tbody.appendChild(tr);
+  });
+}
+
+function filterAndRenderUsers(term) {
+  if (!term) {
+    renderUserTable(allUsers);
+    return;
+  }
+
+  const filtered = allUsers.filter(user => {
+    const name = (user.employee_name || "").toLowerCase();
+    const email = (user.email || "").toLowerCase();
+    const role = (user.role || "").toLowerCase();
+    const route = (user.assigned_route || "").toLowerCase();
+    const vehicle = (user.vehicle_number || "").toLowerCase();
+    return name.includes(term) || email.includes(term) || role.includes(term) || route.includes(term) || vehicle.includes(term);
+  });
+
+  renderUserTable(filtered);
 }
 
 async function removeUser(employeeId, name) {
@@ -159,6 +195,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const createBtn = document.getElementById("createUserBtn");
   if (createBtn) {
     createBtn.addEventListener("click", createUser);
+  }
+
+  // Search input listener
+  const searchInput = document.getElementById("userSearchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const term = e.target.value.toLowerCase().trim();
+      filterAndRenderUsers(term);
+    });
   }
 
   // Load user list

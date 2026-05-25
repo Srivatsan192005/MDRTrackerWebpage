@@ -12,6 +12,207 @@
   --accent-gradient: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
 }
 
+/* ============================
+   MOBILE-FIRST RESPONSIVE FOUNDATION
+   ============================ */
+:root {
+  /* Spacing scale (mobile-first) */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+
+  /* Touch / sizing */
+  --touch-min: 44px;
+
+  /* Breakpoints (mobile-first) */
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1440px;
+
+  /* Typography (fluid) */
+  --h1: clamp(1.25rem, 1.1rem + 2.5vw, 2rem);
+  --h2: clamp(1.1rem, 0.95rem + 1.8vw, 1.6rem);
+  --h3: clamp(1rem, 0.9rem + 1.2vw, 1.25rem);
+  --body: clamp(0.95rem, 0.85rem + 0.6vw, 1rem);
+
+  /* Performance flags */
+  --mobile-blur: 8px;
+  --desktop-blur: 20px;
+}
+
+/* Respect safe areas (notches, gesture bars) */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Utility: lock body scroll when drawer open */
+.drawer-open {
+  overflow: hidden !important;
+}
+
+/* Mobile-first baseline adjustments */
+html, body {
+  font-size: 16px;
+}
+
+/* Reduce heavy effects on small devices for performance */
+@media (max-width: 768px) {
+  .login-container,
+  .route-card,
+  .table-container,
+  .sidebar,
+  .driver-card {
+    backdrop-filter: blur(var(--mobile-blur));
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  }
+
+  * {
+    will-change: auto;
+  }
+}
+
+/* Touch target baseline */
+.map-btn, .action-btn, .top-btn, .add-user-btn, .route-controls .logout-btn {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: calc(var(--space-sm) / 2) !important;
+}
+
+/* Floating glass dock for map controls on mobile */
+.map-controls {
+  /* mobile-first: bottom-right dock */
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  z-index: 1400;
+  backdrop-filter: blur(6px);
+}
+
+/* Responsive grids & cards */
+.routes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  width: 100%;
+  padding: 0 var(--space-sm);
+}
+
+@media (min-width: 768px) {
+  .routes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0 var(--space-md);
+    gap: var(--space-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .routes-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+}
+
+/* Responsive typography */
+.route-title { font-size: var(--h2); }
+.login-title { font-size: var(--h1); }
+.route-name { font-size: var(--h3); }
+body { font-size: var(--body); }
+
+/* Transform tables to stacked cards on small screens */
+@media (max-width: 480px) {
+  .user-table {
+    display: block !important;
+    width: 100% !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  .user-table thead {
+    display: none !important;
+  }
+  .user-table tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+  .user-table tr {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 20px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(11, 60, 117, 0.12) !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+    box-shadow: 0 4px 12px rgba(11, 60, 117, 0.04) !important;
+    box-sizing: border-box !important;
+  }
+  .user-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 12px 0 !important;
+    background: transparent !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
+    font-size: 13px !important;
+    text-align: right !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .user-table td:last-child {
+    border-bottom: none !important;
+    justify-content: center !important;
+    padding-top: 14px !important;
+    text-align: center !important;
+  }
+  /* Pro dynamic responsive labels */
+  .user-table td::before {
+    content: attr(data-label);
+    font-weight: 600 !important;
+    color: #475569 !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-right: 12px !important;
+    float: left !important;
+    text-align: left !important;
+  }
+}
+
+/* Sidebar: mobile drawer behavior */
+.sidebar {
+  width: 88vw;
+  max-width: 420px;
+  transform: translateX(-110%);
+  box-shadow: 0 18px 40px rgba(2,6,23,0.18);
+}
+
+/* Backdrop when drawer open */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.32);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 320ms cubic-bezier(.2,.9,.2,1);
+  z-index: 1190;
+  pointer-events: none;
+}
+.drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+/* Safe area for floating controls */
+.speed-indicator, .eta-display { margin-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+/* Reduce heavy hover and transitions on mobile */
+@media (max-width: 480px) {
+  .route-card:hover, .driver-card:hover, .add-user-btn:hover { transform: none; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+}
+
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -583,50 +784,58 @@ body, html {
   position: fixed;
   left: 0;
   top: 0;
-  height: 100vh;
-  width: 420px;
-  background: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  bottom: 0;
+  height: 100vh !important;
+  width: min(90vw, 380px) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 8px 32px 0 rgba(11, 60, 117, 0.12) !important;
+  z-index: 2000 !important;
+  transform: translateX(-105%);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
+  visibility: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.05);
-  z-index: 1200;
-  transition: transform 0.28s ease, box-shadow 0.2s ease;
-  transform: translateX(-110%);
+  border-top-right-radius: 24px;
+  border-bottom-right-radius: 24px;
+  overflow: hidden;
 }
 
-.sidebar:not(.hidden) {
-  transform: translateX(0);
+.sidebar.open {
+  transform: translateX(0) !important;
+  visibility: visible !important;
 }
 
-#bar:not(.hidden) ~ .map-container #speedCircle,
-#bar:not(.hidden) ~ .map-container #etaDisplay {
+#bar.open ~ .map-container #speedCircle,
+#bar.open ~ .map-container #etaDisplay {
   display: none !important;
 }
 
-/* When the sidebar is open, hide map side controls to avoid overlap */
-#bar:not(.hidden) ~ .map-container .map-controls {
-  display: none !important;
-  pointer-events: none !important;
+/* When the sidebar is open, hide map side controls on mobile to avoid overlap */
+@media (max-width: 768px) {
+  #bar.open ~ .map-container .map-controls {
+    display: none !important;
+    pointer-events: none !important;
+  }
 }
 
-/* Ensure sidebar buttons remain accessible */
-.sidebar-header {
-  position: relative;
-  z-index: 150;
+/* Invisible backdrop to catch click-outside events without dimming the map */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 1990 !important; /* Right below the sidebar */
+  visibility: hidden;
+  pointer-events: none;
 }
 
-/* When sidebar is open, push the map container over so the sidebar is fully visible */
-#bar:not(.hidden) ~ .map-container {
-  margin-left: 420px;
-  transition: margin-left 0.28s ease;
-}
-
-/* Hide sidebar on pages other than tracking to avoid visual glitches */
-#loginPage:not([style*="display: none"]) ~ #trackingPage .sidebar,
-#routeSelectionPage:not([style*="display: none"]) ~ #trackingPage .sidebar,
-#addUserPage:not([style*="display: none"]) ~ #trackingPage .sidebar {
-  display: none !important;
+.drawer-backdrop.open {
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .sidebar-actions {
@@ -831,12 +1040,6 @@ body, html {
 }
 
 @media (max-width: 768px) {
-  /* On small screens, keep feedback near top and avoid pushing it below fold */
-  .sidebar {
-    height: auto;
-    max-height: 60vh;
-  }
-
   .drivers-container {
     padding-bottom: 8px;
   }
@@ -1602,29 +1805,6 @@ body, html {
    ========================================== */
 
 @media (max-width: 768px) {
-  /* 1. Map Sidebar Overlap & Width Fix for Mobile */
-  .sidebar {
-    width: min(86vw, 340px) !important;
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    height: 100vh;
-    z-index: 180 !important;
-    border-right: 1px solid rgba(11, 60, 117, 0.14);
-    border-bottom: none;
-    border-top-right-radius: 24px;
-    border-bottom-right-radius: 24px;
-    background: linear-gradient(135deg, rgba(11, 60, 117, 0.98) 0%, rgba(248, 250, 252, 0.98) 56%, rgba(158, 26, 26, 0.07) 100%);
-    backdrop-filter: blur(18px);
-    box-shadow: 8px 0 28px rgba(11, 60, 117, 0.18);
-    overflow: hidden;
-  }
-
-  .sidebar.hidden {
-    transform: translateX(calc(-100% - 20px));
-  }
-
   #trackingPage {
     position: relative;
   }
@@ -1746,16 +1926,6 @@ body, html {
   }
   
 
-  /* Mobile: sidebar should be a sliding drawer and fully visible */
-  .sidebar {
-    width: min(86vw, 320px);
-    transform: translateX(-110%);
-    height: 100vh;
-  }
-
-  #bar:not(.hidden) ~ .map-container {
-    margin-left: min(86vw, 320px);
-  }
   .route-title {
     font-size: 24px !important;
   }
@@ -1771,12 +1941,6 @@ body, html {
   .route-logo {
     width: 120px !important;
     margin-bottom: 16px;
-  }
-
-  .sidebar {
-    width: min(90vw, 320px) !important;
-    border-top-right-radius: 20px;
-    border-bottom-right-radius: 20px;
   }
 
   .drivers-container {

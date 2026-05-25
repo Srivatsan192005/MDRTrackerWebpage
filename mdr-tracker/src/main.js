@@ -178,6 +178,7 @@ function fetchDrivers() {
   });
 }
 function showRouteSelection() {
+  closeSidebar();
   if (currentUserRole !== "admin") {
     const session = loadAppSession();
     if (session && session.assignedRoute) {
@@ -384,6 +385,31 @@ function showDriversForRoute(route) {
           lat: liveData.location.latitude,
           lng: liveData.location.longitude
         };
+
+        existingDiv.style.cursor = 'pointer';
+        existingDiv.onclick = () => {
+          if (map) {
+            map.panTo(pos);
+            map.setZoom(15);
+            const activeMarker = markersMap.get(driver.id);
+            if (activeMarker && activeMarker.infoWindow) {
+              activeMarker.infoWindow.open(map, activeMarker);
+            }
+          }
+          if (window.innerWidth <= 768) {
+            closeSidebar();
+          }
+        };
+      } else {
+        existingDiv.style.cursor = 'default';
+        existingDiv.onclick = null;
+      }
+
+      if (hasLocation) {
+        const pos = {
+          lat: liveData.location.latitude,
+          lng: liveData.location.longitude
+        };
         const speed = (liveData.location.speed || 0) * 3.6;
         const formattedSpeed = speed.toFixed(1);
         document.getElementById("speedCircle").innerText = formattedSpeed + " km/h";
@@ -486,6 +512,7 @@ function clearListeners() {
 }
 
 function backToRoutes() {
+  closeSidebar();
   clearMarkers();
   clearListeners();
   currentRoute = null;
@@ -755,6 +782,31 @@ function showDriversForVehicle(vehicleNumber) {
           lng: liveData.location.longitude
         };
 
+        existingDiv.style.cursor = 'pointer';
+        existingDiv.onclick = () => {
+          if (map) {
+            map.panTo(pos);
+            map.setZoom(15);
+            const activeMarker = markersMap.get(driver.id);
+            if (activeMarker && activeMarker.infoWindow) {
+              activeMarker.infoWindow.open(map, activeMarker);
+            }
+          }
+          if (window.innerWidth <= 768) {
+            closeSidebar();
+          }
+        };
+      } else {
+        existingDiv.style.cursor = 'default';
+        existingDiv.onclick = null;
+      }
+
+      if (hasLocation) {
+        const pos = {
+          lat: liveData.location.latitude,
+          lng: liveData.location.longitude
+        };
+
         if (!markersMap.has(driver.id)) {
           const vehicleMarker = new google.maps.Marker({
             map,
@@ -883,7 +935,39 @@ function showMapForRoute(routeId) {
 
 function toggleSidebar() {
   const bar = document.getElementById("bar");
-  bar.classList.toggle("hidden");
+  const body = document.body;
+  if (!bar) return;
+  const isOpen = bar.classList.contains('open');
+
+  // Manage backdrop and body lock for mobile drawer UX
+  let backdrop = document.getElementById('drawerBackdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.id = 'drawerBackdrop';
+    backdrop.className = 'drawer-backdrop';
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener('click', closeSidebar);
+  }
+
+  if (!isOpen) {
+    // opening
+    bar.classList.add('open');
+    backdrop.classList.add('open');
+    body.classList.add('drawer-open');
+  } else {
+    // closing
+    closeSidebar();
+  }
+}
+
+function closeSidebar() {
+  const bar = document.getElementById("bar");
+  const body = document.body;
+  const backdrop = document.getElementById('drawerBackdrop');
+  
+  if (bar) bar.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  if (body) body.classList.remove('drawer-open');
 }
 
 function toggleTraffic() {
@@ -895,6 +979,7 @@ function toggleTraffic() {
 }
 
 function showLogin() {
+  closeSidebar();
   document.getElementById("loginPage").style.display = "flex";
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "none";
