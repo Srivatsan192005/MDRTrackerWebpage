@@ -599,6 +599,12 @@ body, html {
   display: none !important;
 }
 
+/* When the sidebar is open, hide map side controls to avoid overlap */
+#bar:not(.hidden) ~ .map-container .map-controls {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 /* Ensure sidebar buttons remain accessible */
 .sidebar-header {
   position: relative;
@@ -615,6 +621,13 @@ body, html {
   border-bottom: 1px solid rgba(229, 231, 235, 0.1);
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
   color: white;
+}
+
+/* Keep header actions visible on scroll and mobile */
+.sidebar-header {
+  position: sticky;
+  top: 0;
+  z-index: 220;
 }
 
 .sidebar-actions {
@@ -797,6 +810,24 @@ body, html {
   margin-top: auto;
   padding: 20px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 768px) {
+  /* On small screens, keep feedback near top and avoid pushing it below fold */
+  .sidebar {
+    height: auto;
+    max-height: 60vh;
+  }
+
+  .drivers-container {
+    padding-bottom: 8px;
+  }
+
+  .sidebar-footer {
+    margin-top: 12px;
+    padding: 12px 12px;
+    border-top: none;
+  }
 }
 
 .feedback-btn {
