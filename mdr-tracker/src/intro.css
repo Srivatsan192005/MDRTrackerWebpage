@@ -1,0 +1,557 @@
+/* ============================================================
+   MDR CINEMATIC INTRO — CSS ANIMATIONS
+   GPU-accelerated with will-change, transform3d, and opacity
+   ============================================================ */
+
+/* ── Timing Custom Properties ── */
+:root {
+  --intro-ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+  --intro-ease-explosive: cubic-bezier(0.22, 1, 0.36, 1);
+  --intro-ease-settle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --intro-ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --intro-primary: #0b3c75;
+  --intro-accent: #9e1a1a;
+  --intro-gold: #c9a227;
+}
+
+/* ── Overlay Container ── */
+#mdrIntroOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #000;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  will-change: opacity;
+}
+
+#mdrIntroOverlay.fade-out {
+  animation: introOverlayFadeOut 0.9s var(--intro-ease-settle) forwards;
+}
+
+@keyframes introOverlayFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+/* ── Main Canvas (brick wall + particles) ── */
+#introCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Camera Push (slow dolly-in on the wall) ── */
+#introSceneWrapper {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+#introSceneWrapper.camera-push {
+  animation: cameraDollyIn 4s var(--intro-ease-cinematic) forwards;
+}
+
+@keyframes cameraDollyIn {
+  0%   { transform: scale(1); }
+  100% { transform: scale(1.18); }
+}
+
+/* ── Screen Shake ── */
+#introSceneWrapper.screen-shake {
+  animation: screenShake 0.55s ease-out;
+}
+
+@keyframes screenShake {
+  0%   { transform: translate(0, 0) scale(1.18); }
+  8%   { transform: translate(-14px, -8px) scale(1.19); }
+  16%  { transform: translate(12px, 10px) scale(1.2); }
+  24%  { transform: translate(-10px, 6px) scale(1.19); }
+  32%  { transform: translate(8px, -10px) scale(1.18); }
+  40%  { transform: translate(-6px, 4px) scale(1.18); }
+  52%  { transform: translate(5px, -3px) scale(1.18); }
+  64%  { transform: translate(-3px, 2px) scale(1.18); }
+  80%  { transform: translate(1px, -1px) scale(1.18); }
+  100% { transform: translate(0, 0) scale(1.18); }
+}
+
+/* ── Bus Silhouette ── */
+#busSilhouette {
+  position: absolute;
+  bottom: 28%;
+  left: 0;                           /* anchor left edge */
+  transform: translateX(-120vw);     /* start: fully off-screen left */
+  width: clamp(280px, 52vw, 740px);
+  height: auto;
+  z-index: 10;
+  will-change: transform, filter;
+  filter: drop-shadow(0 0 60px rgba(255,200,100,0.6))
+          drop-shadow(0 0 20px rgba(255,255,255,0.4));
+}
+
+/* Note: Translation is animated in Javascript inside the requestAnimationFrame loop to ensure perfect resolution-independent alignment on all viewport sizes (landscape, portrait, and mobile). */
+
+/* Motion blur overlay on bus during entry */
+#busMotionBlur {
+  position: absolute;
+  bottom: 28%;
+  left: 0;
+  transform: translateX(-120vw);
+  width: clamp(280px, 52vw, 740px);
+  height: auto;
+  z-index: 9;
+  opacity: 0;
+  will-change: transform, opacity;
+  filter: blur(16px);
+  pointer-events: none;
+}
+
+/* ── Headlight Rays ── */
+#headlightBeams {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1; /* Render behind bus body */
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+#headlightBeams.active {
+  opacity: 1;
+}
+
+/* ── Impact Flash ── */
+#impactFlash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 35% 60%,
+    rgba(255, 230, 150, 0.95) 0%,
+    rgba(255, 200, 80, 0.7) 20%,
+    rgba(255, 150, 50, 0.4) 45%,
+    transparent 70%
+  );
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+}
+
+#impactFlash.flash {
+  animation: impactFlashAnim 0.8s ease-out forwards;
+}
+
+@keyframes impactFlashAnim {
+  0%   { opacity: 0; }
+  5%   { opacity: 1; }
+  20%  { opacity: 0.85; }
+  50%  { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+
+/* ── Dust Clouds ── */
+#dustClouds {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+}
+
+#dustClouds.expand {
+  animation: dustExpand 3.5s var(--intro-ease-settle) forwards;
+}
+
+@keyframes dustExpand {
+  0%   { opacity: 0; filter: blur(0px); }
+  15%  { opacity: 0.95; filter: blur(2px); }
+  50%  { opacity: 0.7; filter: blur(8px); }
+  80%  { opacity: 0.3; filter: blur(16px); }
+  100% { opacity: 0; filter: blur(24px); }
+}
+
+/* ── Tire Smoke Trail ── */
+#tireSmokeCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9;
+  pointer-events: none;
+}
+
+/* ── Logo Reveal Container ── */
+#logoRevealContainer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(11, 60, 117, 0.16) 0%,   /* extremely soft ambient blue */
+    rgba(158, 26, 26, 0.05) 40%,  /* subtle dark red touch */
+    rgba(0, 0, 0, 0.95) 100%
+  );
+}
+
+#logoRevealContainer.reveal {
+  animation: logoContainerReveal 0.6s ease-out forwards;
+}
+
+@keyframes logoContainerReveal {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ── Logo Wrapper ── */
+#introLogoWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
+}
+
+#introLogoWrapper.scale-in {
+  animation: logoScaleIn 0.9s var(--intro-ease-elastic) forwards;
+}
+
+@keyframes logoScaleIn {
+  0%   { transform: scale(0.3); opacity: 0; }
+  40%  { opacity: 1; }
+  70%  { transform: scale(1.06); }
+  85%  { transform: scale(0.97); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Logo Image ── */
+#introLogo {
+  position: relative;
+  z-index: 2;
+  width: clamp(280px, 40vw, 600px);
+  border-radius: 12px; /* Smooth rounded corners for the white card banner! */
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.85); /* Premium drop shadow */
+  filter: drop-shadow(0 0 40px rgba(11, 60, 117, 0.5))
+          drop-shadow(0 0 80px rgba(11, 60, 117, 0.25))
+          brightness(1.05);
+  will-change: filter, transform;
+}
+
+#introLogo.bloom-pulse {
+  animation: logoBoomPulse 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes logoBoomPulse {
+  0%   {
+    filter: drop-shadow(0 0 30px rgba(11, 60, 117, 0.5))
+            drop-shadow(0 0 60px rgba(11, 60, 117, 0.25))
+            brightness(1.05);
+    transform: scale(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 60px rgba(11, 60, 117, 0.85))
+            drop-shadow(0 0 120px rgba(158, 26, 26, 0.45))
+            drop-shadow(0 0 180px rgba(11, 60, 117, 0.25))
+            brightness(1.18);
+    transform: scale(1.02);
+  }
+}
+
+/* ── Sleek Horizontal Laser Tracking Line (Replaces Glow Ring) ── */
+#logoGlow {
+  position: absolute;
+  width: 250vw; /* stretch completely across viewport */
+  height: 2px;  /* ultra-sleek high-tech line */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scaleX(0);
+  transform-origin: center center;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(11, 60, 117, 0.7) 35%, 
+    rgba(255, 255, 255, 0.95) 50%, 
+    rgba(158, 26, 26, 0.7) 65%, 
+    transparent 100%
+  );
+  z-index: 1;
+  opacity: 0;
+  box-shadow: 
+    0 0 10px rgba(11, 60, 117, 0.8),
+    0 0 25px rgba(158, 26, 26, 0.6);
+  will-change: transform, opacity;
+}
+
+#logoGlow.glow-in {
+  animation: laserStretch 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes laserStretch {
+  0%   { transform: translate(-50%, -50%) scaleX(0); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scaleX(1); opacity: 1; }
+}
+
+#logoGlow.glow-pulse {
+  animation: laserPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes laserPulse {
+  0%   { opacity: 0.75; filter: brightness(0.9); }
+  100% { opacity: 1; filter: brightness(1.2) drop-shadow(0 0 4px rgba(255,255,255,0.4)); }
+}
+
+/* ── Volumetric Vertical Light Shaft (Replaces Radial rays) ── */
+#lightRays {
+  position: absolute;
+  width: clamp(280px, 45vw, 680px);
+  height: 400vh; /* very tall to project off screen */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scaleY(0);
+  transform-origin: center center;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(11, 60, 117, 0.12) 30%,
+    rgba(11, 60, 117, 0.18) 50%,
+    rgba(158, 26, 26, 0.08) 70%,
+    transparent 100%
+  );
+  z-index: 0;
+  opacity: 0;
+  filter: blur(35px); /* extremely soft and cinematic */
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+#lightRays.rays-in {
+  animation: volumetricPillar 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes volumetricPillar {
+  0%   { transform: translate(-50%, -50%) scaleY(0) scaleX(0.7); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scaleY(1) scaleX(1); opacity: 1; }
+}
+
+/* ── Logo Particles Canvas ── */
+#logoParticles {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ── Tagline ── */
+#introTagline {
+  margin-top: 32px;
+  font-size: clamp(14px, 1.8vw, 20px);
+  font-weight: 300;
+  letter-spacing: 0.45em; /* Widen letter-spacing for premium feel */
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow:
+    0 0 20px rgba(11, 60, 117, 0.8),
+    0 0 40px rgba(11, 60, 117, 0.4),
+    0 2px 4px rgba(0,0,0,0.5);
+  opacity: 0;
+  will-change: opacity, transform;
+  position: relative;
+  z-index: 5;
+}
+
+#introTagline.tagline-in {
+  animation: taglineFadeIn 1.2s var(--intro-ease-cinematic) forwards;
+}
+
+@keyframes taglineFadeIn {
+  0%   { opacity: 0; transform: translateY(16px); letter-spacing: 0.7em; }
+  100% { opacity: 1; transform: translateY(0); letter-spacing: 0.45em; }
+}
+
+/* ── Skip Intro Button ── */
+#skipIntroBtn {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  padding: 10px 20px;
+  border-radius: 24px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.25s ease;
+  opacity: 0;
+  will-change: opacity;
+}
+
+#skipIntroBtn.visible {
+  animation: skipBtnFadeIn 0.5s ease-out forwards;
+}
+
+@keyframes skipBtnFadeIn {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+#skipIntroBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+#skipIntroBtn:active {
+  transform: translateY(0);
+}
+
+/* ── Progress Bar ── */
+#introProgress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--intro-primary), var(--intro-accent));
+  z-index: 99999;
+  width: 0%;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 8px rgba(11, 60, 117, 0.8);
+}
+
+/* ── Ambient Particles (pre-impact floating dust) ── */
+#ambientParticles {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* ── Vignette ── */
+#introVignette {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(0,0,0,0.4) 70%,
+    rgba(0,0,0,0.85) 100%
+  );
+}
+
+/* ── Fog Layer ── */
+#introFog {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 20% 70%, rgba(80,80,80,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 30%, rgba(60,60,60,0.12) 0%, transparent 55%);
+  will-change: opacity;
+}
+
+#introFog.fog-in {
+  animation: fogReveal 2s ease-out forwards;
+}
+
+@keyframes fogReveal {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ── Broken Wall Fragments (CSS debris) ── */
+.debris-fragment {
+  position: absolute;
+  border-radius: 2px;
+  will-change: transform, opacity;
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+/* ── Login form initial hidden state (set by intro, fades in after) ── */
+/* Applied only while body.intro-running is active */
+body.intro-running #loginPage {
+  opacity: 0 !important;
+  transition: opacity 0.8s var(--intro-ease-cinematic);
+}
+
+#loginPage.intro-complete {
+  opacity: 1 !important;
+  transition: opacity 0.8s var(--intro-ease-cinematic);
+}
+
+
+/* ── REDUCED MOTION: skip everything ── */
+@media (prefers-reduced-motion: reduce) {
+  #mdrIntroOverlay {
+    display: none !important;
+  }
+  #loginPage {
+    opacity: 1 !important;
+  }
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 768px) {
+  #skipIntroBtn {
+    bottom: 20px;
+    right: 16px;
+    font-size: 12px;
+    padding: 8px 16px;
+  }
+
+  #introTagline {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    margin-top: 20px;
+    padding: 0 20px;
+    text-align: center;
+  }
+
+  #introLogo {
+    width: clamp(200px, 75vw, 380px);
+  }
+
+  #busSilhouette,
+  #busMotionBlur {
+    bottom: 22%;
+    width: clamp(200px, 85vw, 480px);
+  }
+}
+
+@media (max-width: 480px) {
+  #introLogo {
+    width: clamp(160px, 80vw, 300px);
+  }
+
+  #busSilhouette,
+  #busMotionBlur {
+    bottom: 18%;
+    width: clamp(180px, 92vw, 380px);
+  }
+}

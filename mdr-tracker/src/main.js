@@ -30,8 +30,41 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const APP_SESSION_KEY = "mdr_app_session";
-const APP_VIEW_KEY = "mdr_app_view";
+const SKIP_LOGIN_ANIMATION_ONCE_KEY = "mdr_skip_login_animation_once";
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBg_M5sBVJMN4EQqZ9isya-87ax8faRxoI";
+
+function shouldPlayLoginAnimation() {
+  if (sessionStorage.getItem(SKIP_LOGIN_ANIMATION_ONCE_KEY) === "1") {
+    sessionStorage.removeItem(SKIP_LOGIN_ANIMATION_ONCE_KEY);
+    return false;
+  }
+
+  const navEntry = performance.getEntriesByType("navigation")[0];
+  if (navEntry && navEntry.type === "reload") {
+    return false;
+  }
+
+  return true;
+}
+
+function setLoginAnimationState(playAnimation) {
+  const loginPage = document.getElementById("loginPage");
+  if (!loginPage) {
+    return;
+  }
+
+  loginPage.classList.remove("login-animate");
+  if (playAnimation) {
+    // Force reflow so the CSS animation restarts every time login is shown.
+    void loginPage.offsetWidth;
+    loginPage.classList.add("login-animate");
+  }
+}
+
+function applyLoginAnimationState() {
+  const playAnimation = shouldPlayLoginAnimation();
+  setLoginAnimationState(playAnimation);
+}
 
 function saveAppSession(session) {
   localStorage.setItem(APP_SESSION_KEY, JSON.stringify(session));
@@ -47,105 +80,6 @@ function loadAppSession() {
 
 function clearAppSession() {
   localStorage.removeItem(APP_SESSION_KEY);
-}
-
-function saveAppView(view) {
-  localStorage.setItem(APP_VIEW_KEY, view);
-}
-
-function loadAppView() {
-  return localStorage.getItem(APP_VIEW_KEY);
-}
-
-function clearAppView() {
-  localStorage.removeItem(APP_VIEW_KEY);
-}
-
-function hasValidRouteValue(route) {
-  if (route == null) {
-    return false;
-  }
-
-  const normalized = String(route).trim();
-  if (!normalized) {
-    return false;
-  }
-
-  return !['null', 'undefined', 'no route assigned', 'none'].includes(normalized.toLowerCase());
-}
-
-function restoreSavedView(session, savedRoute, viewType) {
-  if (!hasValidRouteValue(savedRoute) && !(session && hasValidRouteValue(session.assignedRoute))) {
-    return false;
-  }
-
-  const loginPage = document.getElementById("loginPage");
-  if (loginPage) {
-    loginPage.style.display = "none";
-  }
-
-  if (session && session.role) {
-    currentUserRole = session.role;
-  }
-
-  initMap();
-
-  if (hasValidRouteValue(savedRoute) && viewType === 'generalVehicle') {
-    currentRoute = savedRoute;
-    showDriversForGeneralVehicle(savedRoute);
-    return true;
-  }
-
-  if (hasValidRouteValue(savedRoute) && viewType === 'vehicle') {
-    currentRoute = savedRoute;
-    showDriversForVehicle(savedRoute);
-    return true;
-  }
-
-  if (hasValidRouteValue(savedRoute) && viewType === 'route') {
-    currentRoute = savedRoute;
-    if (session && hasValidRouteValue(session.vehicleNumber)) {
-      if (!showAssignedView(savedRoute, session.vehicleNumber)) {
-        showRouteSelection();
-      }
-    } else {
-      showDriversForRoute(savedRoute);
-    }
-    return true;
-  }
-
-  if (session && hasValidRouteValue(session.assignedRoute)) {
-    if (!showAssignedView(session.assignedRoute, session.vehicleNumber)) {
-      showRouteSelection();
-    }
-    return true;
-  }
-
-  return false;
-}
-
-function restoreSavedPage(session, savedRoute, viewType) {
-  const savedPage = loadAppView();
-
-  if (savedPage === "login") {
-    showLogin();
-    return true;
-  }
-
-  if (savedPage === "routeSelection") {
-    if (session && session.role === "admin") {
-      showRouteSelection();
-      return true;
-    }
-  }
-
-  if (savedPage === "tracking") {
-    if (restoreSavedView(session, savedRoute, viewType)) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 let googleMapsLoadingPromise = null;
@@ -453,15 +387,9 @@ async function fetchDrivers() {
 }
 function showRouteSelection() {
   closeSidebar();
-  saveAppView("routeSelection");
-  currentRoute = null;
-  currentViewType = null;
-  localStorage.removeItem('currentRoute');
-  localStorage.removeItem('viewType');
-
   if (currentUserRole !== "admin") {
     const session = loadAppSession();
-    if (session && hasValidRouteValue(session.assignedRoute)) {
+    if (session && session.assignedRoute) {
       if (showAssignedView(session.assignedRoute, session.vehicleNumber)) {
         return;
       }
@@ -480,6 +408,7 @@ function showRouteSelection() {
   document.getElementById("trackingPage").style.display = "none";
   document.getElementById("routeSelectionPage").style.display = "flex";
 
+  // Add User button (Admin only)
   const addUserBtn = document.getElementById("addUserBtn");
   if (addUserBtn && currentUserRole === "admin") {
     addUserBtn.style.display = "block";
@@ -494,6 +423,11 @@ function showRouteSelection() {
   const container = document.getElementById("routeList");
   container.innerHTML = "";
 
+  /* =====================================
+     ADMIN → VEHICLE + DRIVER + STATUS
+     ===================================== */
+
+  // 1️⃣ Get unique vehicles
   const vehicles = [
     ...new Set(
       allDrivers
@@ -507,10 +441,12 @@ function showRouteSelection() {
     card.className = "route-card";
     card.onclick = () => showMapForRoute(vehicle);
 
+    // Vehicle title
     const vehicleTitle = document.createElement("div");
     vehicleTitle.className = "route-name";
     vehicleTitle.textContent = vehicle;
 
+    // Driver row (live update)
     const driverRow = document.createElement("div");
     driverRow.className = "driver-status";
     driverRow.innerHTML = `
@@ -522,6 +458,7 @@ function showRouteSelection() {
     card.appendChild(driverRow);
     container.appendChild(card);
 
+    // 2️⃣ Find driver(s) assigned to this vehicle
     const driversForVehicle = allDrivers.filter(
       d => d.assignedVehicle === vehicle
     );
@@ -533,10 +470,20 @@ function showRouteSelection() {
         const liveData = snapshot.val();
         if (!liveData) return;
 
-        const hasLocation = liveData.location?.latitude && liveData.location?.longitude;
+        const hasLocation =
+          liveData.location?.latitude &&
+          liveData.location?.longitude;
+
+        // 🔒 SAFE ONLINE CHECK
         const isOnline = liveData.isOnline === true;
-        const status = isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
-        const statusClass = isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+
+        const status = isOnline
+          ? (hasLocation ? "Trip In Progress" : "Online")
+          : "Offline";
+
+        const statusClass = isOnline
+          ? (hasLocation ? "status-trip" : "status-online")
+          : "status-offline";
 
         driverRow.innerHTML = `
           <span class="driver-name">
@@ -551,12 +498,13 @@ function showRouteSelection() {
   });
 }
 
+
 function showDriversForRoute(route) {
   clearMarkers();
   clearListeners();
   currentRoute = route;
   currentViewType = 'route';
-  saveAppView("tracking");
+  localStorage.setItem('currentRoute', route);
   localStorage.setItem('viewType', 'route');
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "flex";
@@ -796,7 +744,7 @@ async function logout() {
   localStorage.removeItem('currentRoute');
   localStorage.removeItem('viewType');
   clearAppSession();
-  saveAppView("login");
+  sessionStorage.setItem(SKIP_LOGIN_ANIMATION_ONCE_KEY, "1");
   await supabase.auth.signOut();
   location.reload();
 }
@@ -863,25 +811,51 @@ async function handleAppLoadOrResume() {
     // Run browser seeding for test accounts
     await runTemporaryInsert();
 
-    const savedRoute = localStorage.getItem('currentRoute');
-    const viewType = localStorage.getItem('viewType');
-    const appSession = loadAppSession();
-
-    if (restoreSavedPage(appSession, savedRoute, viewType)) {
-      return;
-    }
-
-    if (restoreSavedView(appSession, savedRoute, viewType)) {
-      return;
-    }
-
     const skipLogin = localStorage.getItem('skipLogin');
     const userRole = localStorage.getItem('userRole');
 
     if (skipLogin === 'true' && userRole) {
       localStorage.removeItem('skipLogin');
       localStorage.removeItem('userRole');
-      restoreSavedView({ role: userRole }, savedRoute, viewType);
+      currentUserRole = userRole;
+      initMap();
+      showRouteSelection();
+      return;
+    }
+
+    const session = loadAppSession();
+    if (session) {
+      currentUserRole = session.role || "admin";
+      initMap();
+
+      const savedRoute = localStorage.getItem('currentRoute');
+      const viewType = localStorage.getItem('viewType');
+
+      if (currentUserRole === "admin") {
+        if (savedRoute && viewType === 'vehicle') {
+          currentRoute = savedRoute;
+          showDriversForVehicle(savedRoute);
+        } else {
+          showRouteSelection();
+        }
+      } else if (savedRoute && viewType === 'generalVehicle') {
+        currentRoute = savedRoute;
+        showDriversForGeneralVehicle(savedRoute);
+      } else if (savedRoute && viewType === 'vehicle') {
+        currentRoute = savedRoute;
+        showDriversForVehicle(savedRoute);
+      } else if (savedRoute && viewType === 'route') {
+        currentRoute = savedRoute;
+        if (!showAssignedView(savedRoute, session.vehicleNumber)) {
+          showRouteSelection();
+        }
+      } else if (session.assignedRoute) {
+        if (!showAssignedView(session.assignedRoute, session.vehicleNumber)) {
+          showRouteSelection();
+        }
+      } else {
+        showRouteSelection();
+      }
       return;
     }
 
@@ -909,12 +883,38 @@ async function handleAppLoadOrResume() {
         employeeName: profile.employee_name || "",
         vehicleNumber: profile.vehicle_number || null
       });
+      document.getElementById("loginPage").style.display = "none";
+      initMap();
 
-      restoreSavedView({
-        role: profile.role,
-        assignedRoute: profile.assigned_route || null,
-        vehicleNumber: profile.vehicle_number || null
-      }, savedRoute, viewType);
+      const savedRoute = localStorage.getItem('currentRoute');
+      const viewType = localStorage.getItem('viewType');
+
+      if (profile.role === "admin") {
+        if (savedRoute && viewType === 'vehicle') {
+          currentRoute = savedRoute;
+          showDriversForVehicle(savedRoute);
+        } else {
+          showRouteSelection();
+        }
+      } else {
+        currentViewType = viewType;
+        if (savedRoute && viewType === 'generalVehicle') {
+          currentRoute = savedRoute;
+          showDriversForGeneralVehicle(savedRoute);
+        } else
+        if (savedRoute && viewType === 'route') {
+          currentRoute = savedRoute;
+          if (!showAssignedView(savedRoute, profile.vehicle_number)) {
+            showRouteSelection();
+          }
+        } else if (profile.assigned_route) {
+          if (!showAssignedView(profile.assigned_route, profile.vehicle_number)) {
+            showRouteSelection();
+          }
+        } else {
+          showRouteSelection();
+        }
+      }
     } else {
       showLogin();
     }
@@ -940,7 +940,6 @@ function showDriversForVehicle(vehicleNumber) {
   clearListeners();
   currentRoute = vehicleNumber;
   currentViewType = 'vehicle';
-  saveAppView("tracking");
   localStorage.setItem('currentRoute', vehicleNumber);
   localStorage.setItem('viewType', 'vehicle');
   document.getElementById("routeSelectionPage").style.display = "none";
@@ -1082,7 +1081,6 @@ function showDriversForGeneralVehicle(vehicleNumber) {
   clearListeners();
   currentRoute = vehicleNumber;
   currentViewType = 'generalVehicle';
-  saveAppView("tracking");
   localStorage.setItem('currentRoute', vehicleNumber);
   localStorage.setItem('viewType', 'generalVehicle');
   document.getElementById("routeSelectionPage").style.display = "none";
@@ -1379,7 +1377,7 @@ function toggleTraffic() {
 
 function showLogin() {
   closeSidebar();
-  saveAppView("login");
+  setLoginAnimationState(shouldPlayLoginAnimation());
   document.getElementById("loginPage").style.display = "flex";
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "none";
@@ -1392,6 +1390,8 @@ function openFeedback() {
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
+  applyLoginAnimationState();
+
   // Login functionality
   const loginBtn = document.getElementById('loginBtn');
   if (loginBtn) {
