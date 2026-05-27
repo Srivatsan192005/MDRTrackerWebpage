@@ -1,6 +1,6 @@
 import "./style.css";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-database.js";
+import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-database.js";
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -30,6 +30,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const APP_SESSION_KEY = "mdr_app_session";
+const APP_VIEW_KEY = "mdr_app_view";
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBg_M5sBVJMN4EQqZ9isya-87ax8faRxoI";
 
 function saveAppSession(session) {
@@ -46,6 +47,105 @@ function loadAppSession() {
 
 function clearAppSession() {
   localStorage.removeItem(APP_SESSION_KEY);
+}
+
+function saveAppView(view) {
+  localStorage.setItem(APP_VIEW_KEY, view);
+}
+
+function loadAppView() {
+  return localStorage.getItem(APP_VIEW_KEY);
+}
+
+function clearAppView() {
+  localStorage.removeItem(APP_VIEW_KEY);
+}
+
+function hasValidRouteValue(route) {
+  if (route == null) {
+    return false;
+  }
+
+  const normalized = String(route).trim();
+  if (!normalized) {
+    return false;
+  }
+
+  return !['null', 'undefined', 'no route assigned', 'none'].includes(normalized.toLowerCase());
+}
+
+function restoreSavedView(session, savedRoute, viewType) {
+  if (!hasValidRouteValue(savedRoute) && !(session && hasValidRouteValue(session.assignedRoute))) {
+    return false;
+  }
+
+  const loginPage = document.getElementById("loginPage");
+  if (loginPage) {
+    loginPage.style.display = "none";
+  }
+
+  if (session && session.role) {
+    currentUserRole = session.role;
+  }
+
+  initMap();
+
+  if (hasValidRouteValue(savedRoute) && viewType === 'generalVehicle') {
+    currentRoute = savedRoute;
+    showDriversForGeneralVehicle(savedRoute);
+    return true;
+  }
+
+  if (hasValidRouteValue(savedRoute) && viewType === 'vehicle') {
+    currentRoute = savedRoute;
+    showDriversForVehicle(savedRoute);
+    return true;
+  }
+
+  if (hasValidRouteValue(savedRoute) && viewType === 'route') {
+    currentRoute = savedRoute;
+    if (session && hasValidRouteValue(session.vehicleNumber)) {
+      if (!showAssignedView(savedRoute, session.vehicleNumber)) {
+        showRouteSelection();
+      }
+    } else {
+      showDriversForRoute(savedRoute);
+    }
+    return true;
+  }
+
+  if (session && hasValidRouteValue(session.assignedRoute)) {
+    if (!showAssignedView(session.assignedRoute, session.vehicleNumber)) {
+      showRouteSelection();
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function restoreSavedPage(session, savedRoute, viewType) {
+  const savedPage = loadAppView();
+
+  if (savedPage === "login") {
+    showLogin();
+    return true;
+  }
+
+  if (savedPage === "routeSelection") {
+    if (session && session.role === "admin") {
+      showRouteSelection();
+      return true;
+    }
+  }
+
+  if (savedPage === "tracking") {
+    if (restoreSavedView(session, savedRoute, viewType)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 let googleMapsLoadingPromise = null;
@@ -114,12 +214,83 @@ let showEmployeeLocation = false;
 let routePolylines = new Map();
 let directionsService;
 let locationAsked = false;
+let currentViewType = localStorage.getItem('viewType') || null;
 
 const sharedInfoWindow = typeof google !== "undefined" && google.maps
   ? new google.maps.InfoWindow()
   : null;
 const markersMap = new Map();
 const driverRefs = new Map();
+const supabaseProfiles = new Map();
+
+function normalizeVehicleString(v) {
+  if (!v && v !== 0) return "";
+  let s = v.toString();
+  // remove straight and smart quotes
+  s = s.replace(/["“”‘’']/g, "");
+  // collapse multiple spaces
+  s = s.replace(/\s+/g, " ").trim();
+  // normalize spacing around parentheses
+  s = s.replace(/\s*\(\s*/g, " (").replace(/\s*\)\s*/g, ")");
+  return s.toUpperCase();
+}
+
+function extractPlate(s) {
+  if (!s) return null;
+  try {
+    const text = s.toString().toUpperCase();
+    // Common Indian plate pattern like TN02-BS-1586 or KA01AA1234
+    const m = text.match(/[A-Z]{2}\d{1,2}-[A-Z]{1,2}-\d{1,4}/);
+    if (m) return m[0];
+    // fallback: look for pattern inside parentheses
+    const paren = text.match(/\(([^)]+)\)/);
+    if (paren) {
+      const mm = paren[1].match(/[A-Z]{2}\d{1,2}-[A-Z]{1,2}-\d{1,4}/);
+      if (mm) return mm[0];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Returns an array of driver profiles (from Supabase + Firebase) for a given general vehicle
+async function routeForGeneral(vehicleNumber) {
+  const selectedNorm = normalizeVehicleString(vehicleNumber);
+  const results = [];
+
+  for (const [employee_id, profile] of supabaseProfiles.entries()) {
+    if (!employee_id) continue;
+    const assignedVehicle = (profile.assignedVehicle || "").toString();
+    const assignedRoute = (profile.assignedRoute || "").toString().trim().toLowerCase();
+    const sbNorm = normalizeVehicleString(assignedVehicle);
+
+    if (assignedRoute !== 'general') continue;
+    if (selectedNorm !== sbNorm) continue;
+
+    try {
+      const userSnap = await get(ref(db, `users/${employee_id}`));
+      if (!userSnap.exists()) {
+        // no live record in Firebase — still include but mark as no-live
+        results.push({ id: employee_id, ...profile, hasLive: false });
+      } else {
+        const live = userSnap.val();
+        results.push({ id: employee_id, ...profile, hasLive: true, live });
+      }
+    } catch (err) {
+      console.warn(`Failed to fetch Firebase user ${employee_id}:`, err.message || err);
+      // include fallback profile
+      results.push({ id: employee_id, ...profile, hasLive: false });
+    }
+  }
+
+  return results;
+}
+
+function isFirebasePermissionError(error) {
+  const message = `${error?.code || ""} ${error?.message || ""}`.toLowerCase();
+  return message.includes("permission_denied") || message.includes("permission denied");
+}
 
 // Notification function
 function showNotification(driverName, route) {
@@ -129,6 +300,84 @@ function showNotification(driverName, route) {
       icon: "/mdr_bus_icon.png"
     });
   }
+}
+
+async function syncAssignedUsersToFirebase() {
+  try {
+    const { data: profiles, error } = await supabase
+      .from("route_tracking")
+      .select("employee_id, employee_name, email, role, assigned_route, vehicle_number")
+      .neq("role", "admin");
+
+    if (error) {
+      console.error("Failed to sync route_tracking users:", error);
+      return;
+    }
+
+    const updates = (profiles || [])
+      .filter(profile => profile.employee_id && (profile.assigned_route || profile.vehicle_number))
+      .map(profile => {
+        // Populate Supabase profile map for authoritative assignment data
+        const assignedVehicleNorm = normalizeVehicleString(profile.vehicle_number || "");
+        const assignedRouteNorm = (profile.assigned_route || "").toString().trim().toLowerCase();
+        const assignedPlate = extractPlate(assignedVehicleNorm);
+        supabaseProfiles.set(profile.employee_id, {
+          employee_name: profile.employee_name,
+          email: profile.email,
+          role: profile.role,
+          assignedRoute: assignedRouteNorm,
+          assignedVehicle: assignedVehicleNorm,
+          vehicleNumber: assignedVehicleNorm,
+          assignedPlate: assignedPlate
+        });
+
+        return update(ref(db, `users/${profile.employee_id}`), {
+          name: profile.employee_name || "Unnamed Driver",
+          employee_name: profile.employee_name || "Unnamed Driver",
+          email: profile.email || null,
+          role: profile.role || "employee",
+          assignedRoute: assignedRouteNorm || null,
+          assignedVehicle: assignedVehicleNorm || null,
+          vehicleNumber: assignedVehicleNorm || null,
+          assignedPlate: assignedPlate || null,
+          employee_id: profile.employee_id
+        });
+      });
+
+    const results = await Promise.allSettled(updates);
+    if (results.some(result => result.status === "rejected" && isFirebasePermissionError(result.reason))) {
+      console.warn("Firebase sync skipped because realtime database denied one or more writes.");
+    }
+  } catch (error) {
+    if (isFirebasePermissionError(error)) {
+      console.warn("Firebase sync skipped because realtime database denied access.");
+      return;
+    }
+
+    throw error;
+  }
+}
+
+function isGeneralRoute(route) {
+  return (route || "").trim().toLowerCase() === "general";
+}
+
+function showAssignedView(route, vehicleNumber) {
+  if (isGeneralRoute(route)) {
+    if (vehicleNumber) {
+      showDriversForGeneralVehicle(vehicleNumber);
+      return true;
+    }
+
+    return false;
+  }
+
+  if (route) {
+    showDriversForRoute(route);
+    return true;
+  }
+
+  return false;
 }
 
 // Request notification permission on load
@@ -153,14 +402,30 @@ function initMap() {
   fetchDrivers();
 }
 
-function fetchDrivers() {
+async function fetchDrivers() {
+  await syncAssignedUsersToFirebase();
+
   const usersRef = ref(db, "users");
   onValue(usersRef, snapshot => {
     allDrivers = [];
     snapshot.forEach(child => {
       const data = child.val();
-      if (data.role === "driver") {
-        allDrivers.push({ id: child.key, ...data });
+      if (data.role !== "admin") {
+        // Prefer Supabase assignment data when available
+        const sb = supabaseProfiles.get(child.key) || {};
+        const assignedVehicle = sb.assignedVehicle || normalizeVehicleString(data.assignedVehicle || "");
+        const assignedRoute = sb.assignedRoute || (data.assignedRoute || "").toString().trim().toLowerCase();
+        const assignedPlate = sb.assignedPlate || extractPlate(assignedVehicle);
+
+        if (assignedVehicle || assignedRoute) {
+          allDrivers.push({
+            id: child.key,
+            ...data,
+            assignedVehicle,
+            assignedRoute,
+            assignedPlate
+          });
+        }
       }
     });
     
@@ -169,29 +434,52 @@ function fetchDrivers() {
       showRouteSelection();
     } else if (currentRoute) {
       // Refresh current view without changing the display
-      if (currentUserRole === "admin") {
+      if (currentViewType === 'generalVehicle') {
+        showDriversForGeneralVehicle(currentRoute);
+      } else if (currentUserRole === "admin") {
         showDriversForVehicle(currentRoute);
       } else {
         showDriversForRoute(currentRoute);
       }
     }
+  }, error => {
+    if (isFirebasePermissionError(error)) {
+      console.warn("Firebase read skipped because realtime database denied access.");
+      return;
+    }
+
+    console.error("Failed to read Firebase users:", error);
   });
 }
 function showRouteSelection() {
   closeSidebar();
+  saveAppView("routeSelection");
+  currentRoute = null;
+  currentViewType = null;
+  localStorage.removeItem('currentRoute');
+  localStorage.removeItem('viewType');
+
   if (currentUserRole !== "admin") {
     const session = loadAppSession();
-    if (session && session.assignedRoute) {
-      showDriversForRoute(session.assignedRoute);
-      return;
+    if (session && hasValidRouteValue(session.assignedRoute)) {
+      if (showAssignedView(session.assignedRoute, session.vehicleNumber)) {
+        return;
+      }
     }
+
+    const errorText = document.getElementById("errorText");
+    if (errorText) {
+      errorText.textContent = "No valid route/vehicle assigned for this employee.";
+      errorText.style.display = "block";
+    }
+    showLogin();
+    return;
   }
 
   document.getElementById("loginPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "none";
   document.getElementById("routeSelectionPage").style.display = "flex";
 
-  // Add User button (Admin only)
   const addUserBtn = document.getElementById("addUserBtn");
   if (addUserBtn && currentUserRole === "admin") {
     addUserBtn.style.display = "block";
@@ -206,11 +494,6 @@ function showRouteSelection() {
   const container = document.getElementById("routeList");
   container.innerHTML = "";
 
-  /* =====================================
-     ADMIN → VEHICLE + DRIVER + STATUS
-     ===================================== */
-
-  // 1️⃣ Get unique vehicles
   const vehicles = [
     ...new Set(
       allDrivers
@@ -224,12 +507,10 @@ function showRouteSelection() {
     card.className = "route-card";
     card.onclick = () => showMapForRoute(vehicle);
 
-    // Vehicle title
     const vehicleTitle = document.createElement("div");
     vehicleTitle.className = "route-name";
     vehicleTitle.textContent = vehicle;
 
-    // Driver row (live update)
     const driverRow = document.createElement("div");
     driverRow.className = "driver-status";
     driverRow.innerHTML = `
@@ -241,7 +522,6 @@ function showRouteSelection() {
     card.appendChild(driverRow);
     container.appendChild(card);
 
-    // 2️⃣ Find driver(s) assigned to this vehicle
     const driversForVehicle = allDrivers.filter(
       d => d.assignedVehicle === vehicle
     );
@@ -253,20 +533,10 @@ function showRouteSelection() {
         const liveData = snapshot.val();
         if (!liveData) return;
 
-        const hasLocation =
-          liveData.location?.latitude &&
-          liveData.location?.longitude;
-
-        // 🔒 SAFE ONLINE CHECK
+        const hasLocation = liveData.location?.latitude && liveData.location?.longitude;
         const isOnline = liveData.isOnline === true;
-
-        const status = isOnline
-          ? (hasLocation ? "Trip In Progress" : "Online")
-          : "Offline";
-
-        const statusClass = isOnline
-          ? (hasLocation ? "status-trip" : "status-online")
-          : "status-offline";
+        const status = isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
+        const statusClass = isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
 
         driverRow.innerHTML = `
           <span class="driver-name">
@@ -281,12 +551,12 @@ function showRouteSelection() {
   });
 }
 
-
 function showDriversForRoute(route) {
   clearMarkers();
   clearListeners();
   currentRoute = route;
-  localStorage.setItem('currentRoute', route);
+  currentViewType = 'route';
+  saveAppView("tracking");
   localStorage.setItem('viewType', 'route');
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "flex";
@@ -310,24 +580,10 @@ function showDriversForRoute(route) {
   console.log('Filtering drivers for route:', route);
   console.log('All drivers:', allDrivers.map(d => ({ id: d.id, name: d.name, vehicle: d.assignedVehicle, route: d.assignedRoute })));
 
-  const session = loadAppSession();
-  const employeeVehicleNumber = currentUserRole === "employee"
-    ? (session?.vehicleNumber || "")
-    : "";
-  
   const filtered = allDrivers.filter(d => {
     const driverRoute = (d.assignedRoute || '').trim().toUpperCase();
-    const driverVehicle = (d.assignedVehicle || '').trim().toUpperCase();
     const searchRoute = (route || '').trim().toUpperCase();
-    
-    if (searchRoute.includes('MARUTI SWIFT') && searchRoute.includes('TN02-BS-1586')) {
-      return d.assignedVehicle && d.assignedVehicle.toUpperCase().includes('TN02-BS-1586');
-    }
 
-    if (employeeVehicleNumber) {
-      return driverRoute === searchRoute && driverVehicle === employeeVehicleNumber.trim().toUpperCase();
-    }
-    
     return driverRoute === searchRoute;
   });
   
@@ -540,6 +796,7 @@ async function logout() {
   localStorage.removeItem('currentRoute');
   localStorage.removeItem('viewType');
   clearAppSession();
+  saveAppView("login");
   await supabase.auth.signOut();
   location.reload();
 }
@@ -606,41 +863,25 @@ async function handleAppLoadOrResume() {
     // Run browser seeding for test accounts
     await runTemporaryInsert();
 
+    const savedRoute = localStorage.getItem('currentRoute');
+    const viewType = localStorage.getItem('viewType');
+    const appSession = loadAppSession();
+
+    if (restoreSavedPage(appSession, savedRoute, viewType)) {
+      return;
+    }
+
+    if (restoreSavedView(appSession, savedRoute, viewType)) {
+      return;
+    }
+
     const skipLogin = localStorage.getItem('skipLogin');
     const userRole = localStorage.getItem('userRole');
 
     if (skipLogin === 'true' && userRole) {
       localStorage.removeItem('skipLogin');
       localStorage.removeItem('userRole');
-      currentUserRole = userRole;
-      initMap();
-      showRouteSelection();
-      return;
-    }
-
-    const session = loadAppSession();
-    if (session) {
-      currentUserRole = session.role || "admin";
-      initMap();
-
-      const savedRoute = localStorage.getItem('currentRoute');
-      const viewType = localStorage.getItem('viewType');
-
-      if (currentUserRole === "admin") {
-        if (savedRoute && viewType === 'vehicle') {
-          currentRoute = savedRoute;
-          showDriversForVehicle(savedRoute);
-        } else {
-          showRouteSelection();
-        }
-      } else if (savedRoute && viewType === 'route') {
-        currentRoute = savedRoute;
-        showDriversForRoute(savedRoute);
-      } else if (session.assignedRoute) {
-        showDriversForRoute(session.assignedRoute);
-      } else {
-        showRouteSelection();
-      }
+      restoreSavedView({ role: userRole }, savedRoute, viewType);
       return;
     }
 
@@ -668,29 +909,12 @@ async function handleAppLoadOrResume() {
         employeeName: profile.employee_name || "",
         vehicleNumber: profile.vehicle_number || null
       });
-      document.getElementById("loginPage").style.display = "none";
-      initMap();
 
-      const savedRoute = localStorage.getItem('currentRoute');
-      const viewType = localStorage.getItem('viewType');
-
-      if (profile.role === "admin") {
-        if (savedRoute && viewType === 'vehicle') {
-          currentRoute = savedRoute;
-          showDriversForVehicle(savedRoute);
-        } else {
-          showRouteSelection();
-        }
-      } else {
-        if (savedRoute && viewType === 'route') {
-          currentRoute = savedRoute;
-          showDriversForRoute(savedRoute);
-        } else if (profile.assigned_route) {
-          showDriversForRoute(profile.assigned_route);
-        } else {
-          showDriversForRoute(profile.assigned_route);
-        }
-      }
+      restoreSavedView({
+        role: profile.role,
+        assignedRoute: profile.assigned_route || null,
+        vehicleNumber: profile.vehicle_number || null
+      }, savedRoute, viewType);
     } else {
       showLogin();
     }
@@ -715,6 +939,8 @@ function showDriversForVehicle(vehicleNumber) {
   clearMarkers();
   clearListeners();
   currentRoute = vehicleNumber;
+  currentViewType = 'vehicle';
+  saveAppView("tracking");
   localStorage.setItem('currentRoute', vehicleNumber);
   localStorage.setItem('viewType', 'vehicle');
   document.getElementById("routeSelectionPage").style.display = "none";
@@ -838,8 +1064,177 @@ function showDriversForVehicle(vehicleNumber) {
           }
         }
       }
+    }, error => {
+      if (isFirebasePermissionError(error)) {
+        console.warn(`Firebase read skipped for driver ${driver.id} because access was denied.`);
+        return;
+      }
+
+      console.error(`Failed to read Firebase driver ${driver.id}:`, error);
     });
 
+    driverRefs.set(driver.id, unsub);
+  });
+}
+
+function showDriversForGeneralVehicle(vehicleNumber) {
+  clearMarkers();
+  clearListeners();
+  currentRoute = vehicleNumber;
+  currentViewType = 'generalVehicle';
+  saveAppView("tracking");
+  localStorage.setItem('currentRoute', vehicleNumber);
+  localStorage.setItem('viewType', 'generalVehicle');
+  document.getElementById("routeSelectionPage").style.display = "none";
+  document.getElementById("trackingPage").style.display = "flex";
+  refreshMapLayout();
+
+  const locationBtn = document.getElementById('toggleEmployeeLocationBtn');
+  if (locationBtn) {
+    locationBtn.style.display = currentUserRole === "employee" ? "flex" : "none";
+  }
+
+  const routeInfo = document.querySelector(".route-info");
+  const cleanedVehicleLabel = (vehicleNumber || "").toString().replace(/["“”‘’']/g, "").trim();
+  routeInfo.textContent = `General: ${cleanedVehicleLabel}`;
+
+  updateSidebarActions();
+
+  const container = document.querySelector(".drivers-container");
+  const existingCards = container.querySelectorAll('.driver-card');
+  existingCards.forEach(card => card.remove());
+
+  const selectedNorm = normalizeVehicleString(vehicleNumber);
+  const filtered = allDrivers.filter(d => {
+    const routeNorm = (d.assignedRoute || "").toString().trim().toLowerCase();
+    const vehicleNorm = normalizeVehicleString(d.assignedVehicle || "");
+    return routeNorm === 'general' && vehicleNorm === selectedNorm;
+  });
+
+  if (filtered.length === 0) {
+    console.warn("No general-route drivers found for vehicle:", vehicleNumber);
+  }
+
+  console.log('All drivers (normalized):', allDrivers.map(d => ({ id: d.id, assignedRoute: d.assignedRoute, assignedVehicle: d.assignedVehicle })));
+  console.log('Filtered general drivers for', vehicleNumber, filtered.map(d => ({ id: d.id, assignedRoute: d.assignedRoute, assignedVehicle: d.assignedVehicle })));
+
+  const bounds = new google.maps.LatLngBounds();
+
+  filtered.forEach(driver => {
+    const driverRef = ref(db, `users/${driver.id}`);
+
+    const unsub = onValue(driverRef, snapshot => {
+      const liveData = snapshot.val();
+      if (!liveData) return;
+
+      const hasLocation = liveData?.location?.latitude && liveData?.location?.longitude;
+      const name = liveData?.name || "Unnamed";
+      const status = liveData?.isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
+      const statusClass = liveData?.isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+
+      const divId = `driver-${driver.id}`;
+      let existingDiv = document.getElementById(divId);
+
+      if (!existingDiv) {
+        existingDiv = document.createElement("div");
+        existingDiv.id = divId;
+        existingDiv.className = "driver-card";
+        const sidebar = document.querySelector(".sidebar-footer");
+        sidebar.parentNode.insertBefore(existingDiv, sidebar);
+      }
+
+      existingDiv.innerHTML = `
+        <div class="driver-status">
+          <span class="driver-name">${name}</span>
+          <span class="status-badge ${statusClass}">${status}</span>
+        </div>
+        <div class="driver-meta">
+          Route: ${driver.assignedRoute || 'general'}<br>
+          Vehicle: ${driver.assignedVehicle || "Not assigned"}
+        </div>
+      `;
+
+      if (hasLocation) {
+        const pos = {
+          lat: liveData.location.latitude,
+          lng: liveData.location.longitude
+        };
+
+        existingDiv.style.cursor = 'pointer';
+        existingDiv.onclick = () => {
+          if (map) {
+            map.panTo(pos);
+            map.setZoom(15);
+            const activeMarker = markersMap.get(driver.id);
+            if (activeMarker && activeMarker.infoWindow) {
+              activeMarker.infoWindow.open(map, activeMarker);
+            }
+          }
+          if (window.innerWidth <= 768) {
+            closeSidebar();
+          }
+        };
+      } else {
+        existingDiv.style.cursor = 'default';
+        existingDiv.onclick = null;
+      }
+
+      if (hasLocation) {
+        const pos = {
+          lat: liveData.location.latitude,
+          lng: liveData.location.longitude
+        };
+        const speed = (liveData.location.speed || 0) * 3.6;
+        const formattedSpeed = speed.toFixed(1);
+        document.getElementById("speedCircle").innerText = formattedSpeed + " km/h";
+        document.getElementById("speedCircle").style.display = "flex";
+
+        const updatedAt = liveData.lastUpdated ? new Date(liveData.lastUpdated).toLocaleString() : "Unknown time";
+        const vehicleInfo = driver.assignedVehicle ? `Vehicle: ${driver.assignedVehicle}<br>` : '';
+        const infoContent = `
+          <div style="font-size:14px;">
+            <strong>${name}</strong><br>
+            Route: ${driver.assignedRoute || 'general'}<br>
+            ${vehicleInfo}
+            Speed: ${formattedSpeed} km/h<br>
+            Last Updated: ${updatedAt}
+          </div>
+        `;
+
+        if (markersMap.has(driver.id)) {
+          marker = markersMap.get(driver.id);
+          marker.setPosition(pos);
+          marker.infoWindow.setContent(infoContent);
+        } else {
+          marker = new google.maps.Marker({
+            map,
+            position: pos,
+            title: `${name} - ${driver.assignedVehicle || vehicleNumber}`,
+            icon: "/mdr_bus_icon.png"
+          });
+          const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+          marker.addListener("click", () => infoWindow.open(map, marker));
+          marker.infoWindow = infoWindow;
+          markersMap.set(driver.id, marker);
+        }
+        bounds.extend(pos);
+        if (!userZoomed) {
+          map.fitBounds(bounds);
+          const currentZoom = map.getZoom();
+          if (currentZoom > 12) {
+            map.setZoom(currentZoom - 3);
+          }
+        }
+        map.setCenter(bounds.getCenter());
+      }
+    }, error => {
+      if (isFirebasePermissionError(error)) {
+        console.warn(`Firebase read skipped for driver ${driver.id} because access was denied.`);
+        return;
+      }
+
+      console.error(`Failed to read Firebase driver ${driver.id}:`, error);
+    });
     driverRefs.set(driver.id, unsub);
   });
 }
@@ -918,8 +1313,12 @@ async function validateLogin() {
     if (currentUserRole === "admin") {
       showRouteSelection();
     } else {
-      // Employees go straight to tracking their assigned route
-      showDriversForRoute(profile.assigned_route);
+      // Employees are always restricted to their assigned route/vehicle from Supabase.
+      if (!showAssignedView(profile.assigned_route, profile.vehicle_number)) {
+        errorText.textContent = "No valid route/vehicle assigned for this employee.";
+        errorText.style.display = "block";
+        showLogin();
+      }
     }
 
   } catch (error) {
@@ -980,6 +1379,7 @@ function toggleTraffic() {
 
 function showLogin() {
   closeSidebar();
+  saveAppView("login");
   document.getElementById("loginPage").style.display = "flex";
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "none";

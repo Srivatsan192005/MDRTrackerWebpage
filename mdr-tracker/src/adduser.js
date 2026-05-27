@@ -1,4 +1,6 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-database.js";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -8,7 +10,38 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
+  throw new Error('Missing Firebase environment variables');
+}
+
+const app = initializeApp(firebaseConfig, "add-user-app");
+const db = getDatabase(app);
 let allUsers = [];
+
+function isFirebasePermissionError(error) {
+  const message = `${error?.code || ""} ${error?.message || ""}`.toLowerCase();
+  return message.includes("permission_denied") || message.includes("permission denied");
+}
+
+function normalizeVehicle(v) {
+  if (!v && v !== 0) return "";
+  let s = v.toString();
+  s = s.replace(/["“”‘’']/g, "");
+  s = s.replace(/\s+/g, " ").trim();
+  s = s.replace(/\s*\(\s*/g, " (").replace(/\s*\)\s*/g, ")");
+  return s;
+}
 
 async function createUser() {
   const employeeName = document.getElementById("newEmployeeName").value.trim();
@@ -35,17 +68,27 @@ async function createUser() {
     return;
   }
 
+  if (assignedRoute.toLowerCase() === "general" && !vehicleNumber) {
+    statusText.className = "error-text";
+    statusText.textContent = "Vehicle Number is required for general users";
+    return;
+  }
+
   try {
-    // Insert the profile record directly into the route_tracking table
+    // Create or update the profile record directly in route_tracking.
+    const vehicleNumberNorm = vehicleNumber ? normalizeVehicle(vehicleNumber) : null;
+
     const { error: profileError } = await supabase
       .from("route_tracking")
-      .insert({
+      .upsert({
         employee_id: password, // The password input is the employee_id
         employee_name: employeeName,
         email: email,
         role: role,
         assigned_route: assignedRoute || null,
-        vehicle_number: vehicleNumber || null
+        vehicle_number: vehicleNumberNorm || null
+      }, {
+        onConflict: "employee_id"
       });
 
     if (profileError) {
@@ -54,8 +97,32 @@ async function createUser() {
       return;
     }
 
+    let syncBlockedByFirebase = false;
+
+    try {
+      await set(ref(db, `users/${password}`), {
+        name: employeeName,
+        employee_name: employeeName,
+        email,
+        role,
+        assignedRoute: assignedRoute || null,
+        assignedVehicle: vehicleNumberNorm || null,
+        vehicleNumber: vehicleNumberNorm || null,
+        employee_id: password
+      });
+    } catch (firebaseError) {
+      if (!isFirebasePermissionError(firebaseError)) {
+        throw firebaseError;
+      }
+
+      console.warn("Firebase sync skipped because realtime database denied the write.", firebaseError);
+      syncBlockedByFirebase = true;
+    }
+
     statusText.className = "success-text";
-    statusText.textContent = "User created successfully ✅";
+    statusText.textContent = syncBlockedByFirebase
+      ? "User created successfully ✅ (realtime sync blocked by Firebase rules)"
+      : "User created successfully ✅";
 
     // Clear fields
     document.getElementById("newEmployeeName").value = "";
