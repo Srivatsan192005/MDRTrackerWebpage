@@ -1745,8 +1745,10 @@ body, html {
   100% { box-shadow: 0 0 0 0 rgba(11, 60, 117, 0); }
 }
 
-/* 5. Faded Half-Blueish and Half-Reddish Split Gradient for Login Page (Matches Brand Logo Colors) */
-#loginPage {
+/* 5. Faded Half-Blueish and Half-Reddish Split Gradient for Primary Full-Screen Pages */
+#loginPage,
+#routeSelectionPage,
+#addUserPage {
   background: linear-gradient(135deg, 
     rgba(11, 60, 117, 0.16) 0%, 
     rgba(248, 250, 252, 0.75) 45%, 
