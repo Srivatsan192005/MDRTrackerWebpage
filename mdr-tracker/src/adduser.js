@@ -28,6 +28,8 @@ if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
 const app = initializeApp(firebaseConfig, "add-user-app");
 const db = getDatabase(app);
 let allUsers = [];
+let addUserToastTimer = null;
+let removeUserPromptElement = null;
 
 function isFirebasePermissionError(error) {
   const message = `${error?.code || ""} ${error?.message || ""}`.toLowerCase();
@@ -41,6 +43,116 @@ function normalizeVehicle(v) {
   s = s.replace(/\s+/g, " ").trim();
   s = s.replace(/\s*\(\s*/g, " (").replace(/\s*\)\s*/g, ")");
   return s;
+}
+
+function showAddUserToast(message) {
+  let toast = document.getElementById("addUserToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "addUserToast";
+    toast.style.cssText = `
+      position: fixed;
+      left: 50%;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(16px);
+      background: linear-gradient(135deg, #0b3c75 0%, #9e1a1a 100%);
+      color: #fff;
+      padding: 14px 18px;
+      border-radius: 999px;
+      box-shadow: 0 14px 30px rgba(2, 6, 23, 0.22);
+      z-index: 10000;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      opacity: 0;
+      transition: opacity 220ms ease, transform 220ms ease;
+      pointer-events: none;
+      max-width: calc(100vw - 32px);
+      text-align: center;
+      white-space: nowrap;
+    `;
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.style.opacity = "1";
+  toast.style.transform = "translateX(-50%) translateY(0)";
+
+  if (addUserToastTimer) {
+    clearTimeout(addUserToastTimer);
+  }
+
+  addUserToastTimer = setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(-50%) translateY(16px)";
+  }, 2200);
+}
+
+function closeRemoveUserPrompt() {
+  if (removeUserPromptElement) {
+    removeUserPromptElement.remove();
+    removeUserPromptElement = null;
+  }
+}
+
+function showRemoveUserPrompt(name) {
+  closeRemoveUserPrompt();
+
+  return new Promise(resolve => {
+    const promptBox = document.createElement("div");
+    promptBox.id = "removeUserPrompt";
+    promptBox.style.cssText = `
+      position: fixed;
+      left: 50%;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(18px);
+      width: min(92vw, 420px);
+      background: rgba(255, 255, 255, 0.98);
+      border: 1px solid rgba(11, 60, 117, 0.14);
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.22);
+      z-index: 10001;
+      padding: 16px;
+      opacity: 0;
+      transition: opacity 220ms ease, transform 220ms ease;
+      backdrop-filter: blur(14px);
+    `;
+
+    promptBox.innerHTML = `
+      <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:14px;">
+        <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, rgba(11,60,117,0.12), rgba(158,26,26,0.12)); display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto;">🗑️</div>
+        <div style="min-width:0; flex:1;">
+          <div style="font-size:15px; font-weight:700; color:#0f172a; line-height:1.3;">Remove user?</div>
+          <div style="margin-top:4px; font-size:13px; color:#475569; line-height:1.4; word-break:break-word;">
+            ${name} will be deleted from the user list.
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" id="cancelRemoveUserBtn" style="border:1px solid #cbd5e1; background:#fff; color:#334155; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer; min-width:92px;">Cancel</button>
+        <button type="button" id="confirmRemoveUserBtn" style="border:none; background:linear-gradient(135deg, #b91c1c 0%, #ef4444 100%); color:#fff; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer; min-width:108px;">Remove</button>
+      </div>
+    `;
+
+    document.body.appendChild(promptBox);
+    removeUserPromptElement = promptBox;
+
+    const cancelButton = promptBox.querySelector("#cancelRemoveUserBtn");
+    const confirmButton = promptBox.querySelector("#confirmRemoveUserBtn");
+
+    const finish = value => {
+      closeRemoveUserPrompt();
+      resolve(value);
+    };
+
+    cancelButton.onclick = () => finish(false);
+    confirmButton.onclick = () => finish(true);
+
+    requestAnimationFrame(() => {
+      promptBox.style.opacity = "1";
+      promptBox.style.transform = "translateX(-50%) translateY(0)";
+    });
+  });
 }
 
 async function createUser() {
@@ -119,10 +231,12 @@ async function createUser() {
       syncBlockedByFirebase = true;
     }
 
-    statusText.className = "success-text";
-    statusText.textContent = syncBlockedByFirebase
-      ? "User created successfully ✅ (realtime sync blocked by Firebase rules)"
-      : "User created successfully ✅";
+    statusText.style.display = "none";
+    showAddUserToast(
+      syncBlockedByFirebase
+        ? "New user added"
+        : "New user added"
+    );
 
     // Clear fields
     document.getElementById("newEmployeeName").value = "";
@@ -234,7 +348,7 @@ function filterAndRenderUsers(term) {
 }
 
 async function removeUser(employeeId, name) {
-  const confirmDelete = confirm(`Are you sure you want to remove user "${name}"?`);
+  const confirmDelete = await showRemoveUserPrompt(name);
   if (!confirmDelete) return;
 
   try {
@@ -244,20 +358,39 @@ async function removeUser(employeeId, name) {
       .eq("employee_id", employeeId);
 
     if (error) {
-      alert(`Failed to delete user: ${error.message}`);
+      showAddUserToast(`Failed to delete user`);
       return;
     }
 
     // Refresh UI
     fetchAndDisplayUsers();
+    showAddUserToast(`User removed`);
   } catch (err) {
     console.error("Error deleting user:", err);
-    alert("An unexpected error occurred during user deletion.");
+    showAddUserToast("Deletion failed");
   }
 }
 
 // Wait for DOM to be fully loaded before attaching event listeners
 document.addEventListener('DOMContentLoaded', function() {
+  const backButton = document.getElementById('backToDashboardBtn');
+  if (backButton) {
+    backButton.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      const existingSession = JSON.parse(localStorage.getItem('mdr_app_session') || 'null') || {};
+      localStorage.setItem('mdr_app_session', JSON.stringify({
+        ...existingSession,
+        role: 'admin'
+      }));
+      localStorage.setItem('mdr_app_view', 'routeSelection');
+      localStorage.removeItem('currentRoute');
+      localStorage.removeItem('viewType');
+
+      window.location.href = '../index.html';
+    });
+  }
+
   // Add user button listener
   const createBtn = document.getElementById("createUserBtn");
   if (createBtn) {
