@@ -600,15 +600,15 @@ body, html {
   background: rgba(255, 255, 255, 0.95);
   border: 2px solid #e2e8f0;
   border-radius: 8px;
-  padding: 12px;
+  padding: 13px;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 18px;
+  font-size: 19px;
   color: #e53e3e;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1364,9 +1364,9 @@ body, html {
   }
 
   .route-controls .logout-btn {
-    width: 40px;
-    height: 40px;
-    padding: 8px;
+    width: 44px;
+    height: 44px;
+    padding: 9px;
   }
   
   #trackingPage {
