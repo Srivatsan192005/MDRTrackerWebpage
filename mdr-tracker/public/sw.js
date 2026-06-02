@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mdr-tracker-shell-v1';
+const CACHE_NAME = 'mdr-tracker-shell-v2';
 const APP_ASSETS = [
   '/',
   '/index.html',
