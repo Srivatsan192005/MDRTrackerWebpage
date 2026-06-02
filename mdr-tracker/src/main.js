@@ -602,8 +602,24 @@ function showDriversForRoute(route) {
       
       const hasLocation = liveData?.location?.latitude && liveData?.location?.longitude;
       const name = liveData?.name || "Unnamed";
-      const status = liveData?.isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
-      const statusClass = liveData?.isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+      const isOnline = liveData?.isOnline === true;
+      const status = isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
+      const statusClass = isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+
+      // If driver is offline, remove any sidebar card and marker to hide them
+      if (!isOnline) {
+        const existingDivOffline = document.getElementById(divId);
+        if (existingDivOffline) {
+          existingDivOffline.remove();
+        }
+        if (markersMap.has(driver.id)) {
+          const m = markersMap.get(driver.id);
+          try { m.setMap(null); } catch (e) { }
+          markersMap.delete(driver.id);
+        }
+        driverStatusMap.set(driver.id, "Offline");
+        return;
+      }
       
       // Check for status change from Online to Trip In Progress
       const previousStatus = driverStatusMap.get(driver.id);
@@ -1046,8 +1062,22 @@ function showDriversForVehicle(vehicleNumber) {
       
       const hasLocation = liveData?.location?.latitude && liveData?.location?.longitude;
       const name = liveData?.name || "Unnamed";
-      const status = liveData?.isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
-      const statusClass = liveData?.isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+      const isOnline = liveData?.isOnline === true;
+      const status = isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
+      const statusClass = isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+
+      // Hide offline drivers: remove sidebar card and marker
+      if (!isOnline) {
+        const existingDivOffline = document.getElementById(divId);
+        if (existingDivOffline) existingDivOffline.remove();
+        if (markersMap.has(driver.id)) {
+          const m = markersMap.get(driver.id);
+          try { m.setMap(null); } catch (e) { }
+          markersMap.delete(driver.id);
+        }
+        driverStatusMap.set(driver.id, "Offline");
+        return;
+      }
       
       // Add driver card to sidebar
       const divId = `driver-${driver.id}`;
@@ -1206,8 +1236,22 @@ async function showDriversForGeneralVehicle(vehicleNumber) {
 
       const hasLocation = liveData?.location?.latitude && liveData?.location?.longitude;
       const name = liveData?.name || "Unnamed";
-      const status = liveData?.isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
-      const statusClass = liveData?.isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+      const isOnline = liveData?.isOnline === true;
+      const status = isOnline ? (hasLocation ? "Trip In Progress" : "Online") : "Offline";
+      const statusClass = isOnline ? (hasLocation ? "status-trip" : "status-online") : "status-offline";
+
+      // Hide offline drivers: remove sidebar card and marker
+      if (!isOnline) {
+        const existingDivOffline = document.getElementById(divId);
+        if (existingDivOffline) existingDivOffline.remove();
+        if (markersMap.has(driver.id)) {
+          const m = markersMap.get(driver.id);
+          try { m.setMap(null); } catch (e) { }
+          markersMap.delete(driver.id);
+        }
+        driverStatusMap.set(driver.id, "Offline");
+        return;
+      }
 
       const divId = `driver-${driver.id}`;
       let existingDiv = document.getElementById(divId);
