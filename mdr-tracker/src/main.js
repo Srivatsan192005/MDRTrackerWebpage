@@ -322,6 +322,25 @@ function restoreSavedPage(session, savedRoute, viewType, savedPage) {
     return true;
   }
 
+  if (savedRoute && viewType === "generalVehicle") {
+    currentRoute = savedRoute;
+    showDriversForGeneralVehicle(savedRoute);
+    return true;
+  }
+
+  if (savedRoute && viewType === "vehicle") {
+    currentRoute = savedRoute;
+    showDriversForVehicle(savedRoute);
+    return true;
+  }
+
+  if (savedRoute && viewType === "route") {
+    currentRoute = savedRoute;
+    if (showAssignedView(savedRoute, session?.vehicleNumber)) {
+      return true;
+    }
+  }
+
   if (savedPage === "routeSelection") {
     if (session && session.role === "admin") {
       showRouteSelection();
@@ -339,25 +358,6 @@ function restoreSavedPage(session, savedRoute, viewType, savedPage) {
 
       showRouteSelection();
       return true;
-    }
-
-    if (savedRoute && viewType === "generalVehicle") {
-      currentRoute = savedRoute;
-      showDriversForGeneralVehicle(savedRoute);
-      return true;
-    }
-
-    if (savedRoute && viewType === "vehicle") {
-      currentRoute = savedRoute;
-      showDriversForVehicle(savedRoute);
-      return true;
-    }
-
-    if (savedRoute && viewType === "route") {
-      currentRoute = savedRoute;
-      if (showAssignedView(savedRoute, session?.vehicleNumber)) {
-        return true;
-      }
     }
 
     if (session && session.assignedRoute) {
@@ -456,17 +456,19 @@ function showRouteSelection() {
   document.getElementById("loginPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "none";
   document.getElementById("routeSelectionPage").style.display = "flex";
+  closeAdminMenu();
 
   // Add User button (Admin only)
   const addUserBtn = document.getElementById("addUserBtn");
   if (addUserBtn && currentUserRole === "admin") {
-    addUserBtn.style.display = "block";
-    addUserBtn.onclick = (e) => {
-      e.preventDefault();
-      window.location.replace("src/adduser.html");
-    };
+    addUserBtn.style.display = "flex";
   } else if (addUserBtn) {
     addUserBtn.style.display = "none";
+  }
+
+  const routeLogoutBtn = document.getElementById("routeLogoutBtn");
+  if (routeLogoutBtn) {
+    routeLogoutBtn.style.display = currentUserRole === "admin" ? "flex" : "none";
   }
 
   const container = document.getElementById("routeList");
@@ -1023,6 +1025,7 @@ function showDriversForVehicle(vehicleNumber) {
   clearListeners();
   currentRoute = vehicleNumber;
   currentViewType = 'vehicle';
+  saveAppView("tracking");
   localStorage.setItem('currentRoute', vehicleNumber);
   localStorage.setItem('viewType', 'vehicle');
   document.getElementById("routeSelectionPage").style.display = "none";
@@ -1511,6 +1514,23 @@ function openFeedback() {
   window.open(feedbackUrl, "_blank");
 }
 
+function setAdminMenuOpen(isOpen) {
+  const menuToggle = document.getElementById('adminMenuToggle');
+  const menuPanel = document.getElementById('adminMenuPanel');
+
+  if (!menuToggle || !menuPanel) {
+    return;
+  }
+
+  menuToggle.setAttribute('aria-expanded', String(isOpen));
+  menuPanel.classList.toggle('open', isOpen);
+  menuPanel.setAttribute('aria-hidden', String(!isOpen));
+}
+
+function closeAdminMenu() {
+  setAdminMenuOpen(false);
+}
+
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
   // Login functionality
@@ -1568,17 +1588,51 @@ document.addEventListener('DOMContentLoaded', () => {
     feedbackBtn.addEventListener('click', openFeedback);
   }
 
+  const adminMenuToggle = document.getElementById('adminMenuToggle');
+  const adminMenuPanel = document.getElementById('adminMenuPanel');
+  const adminMenuManageUsersBtn = document.getElementById('addUserBtn');
+  const adminMenuLogoutBtn = document.getElementById('routeLogoutBtn');
+
+  if (adminMenuToggle && adminMenuPanel) {
+    adminMenuToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setAdminMenuOpen(!adminMenuPanel.classList.contains('open'));
+    });
+  }
+
+  if (adminMenuManageUsersBtn) {
+    adminMenuManageUsersBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      closeAdminMenu();
+      window.location.replace('src/adduser.html');
+    });
+  }
+
+  if (adminMenuLogoutBtn) {
+    adminMenuLogoutBtn.addEventListener('click', async (event) => {
+      event.preventDefault();
+      closeAdminMenu();
+      await logout();
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.admin-menu-wrap')) {
+      closeAdminMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeAdminMenu();
+    }
+  });
+
   // Sidebar back and logout buttons
   const sidebarBackBtn = document.getElementById('sidebarBackButton');
   const sidebarLogoutBtn = document.getElementById('sidebarLogoutButton');
   if (sidebarBackBtn) sidebarBackBtn.addEventListener('click', backToRoutes);
   if (sidebarLogoutBtn) sidebarLogoutBtn.addEventListener('click', logout);
-
-  // Route logout button
-  const routeLogoutBtn = document.getElementById('routeLogoutBtn');
-  if (routeLogoutBtn) {
-    routeLogoutBtn.addEventListener('click', logout);
-  }
 
   // Zoom to vehicle
   const zoomBtn = document.getElementById("zoomToVehicleBtn");
