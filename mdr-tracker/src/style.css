@@ -596,18 +596,23 @@ body, html {
   box-shadow: 0 6px 16px rgba(11, 60, 117, 0.3);
 }
 
-.route-controls .logout-btn {
-  background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 13px;
+.route-controls .route-logout-btn {
+  background: linear-gradient(135deg, #8b1e2d 0%, #c61f3d 42%, #1d4ed8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 0 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 19px;
-  color: #e53e3e;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(139, 30, 45, 0.22);
   backdrop-filter: blur(10px);
-  width: 48px;
+  min-width: 108px;
+  width: auto;
   height: 48px;
   display: flex;
   align-items: center;
@@ -615,11 +620,16 @@ body, html {
   position: relative;
 }
 
-.route-controls .logout-btn:hover {
-  background: #ffffff;
-  border-color: #3182ce;
+.route-controls .route-logout-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #c61f3d 55%, #8b1e2d 100%);
+  border-color: rgba(255, 255, 255, 0.24);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 20px rgba(29, 78, 216, 0.28);
+}
+
+.route-controls .route-logout-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.22);
 }
 
 .routes-grid {
@@ -1363,10 +1373,12 @@ body, html {
     height: 40px;
   }
 
-  .route-controls .logout-btn {
-    width: 44px;
+  .route-controls .route-logout-btn {
+    min-width: 96px;
+    width: auto;
     height: 44px;
-    padding: 9px;
+    padding: 0 14px;
+    font-size: 12px;
   }
   
   #trackingPage {
