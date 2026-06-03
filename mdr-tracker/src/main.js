@@ -706,9 +706,9 @@ function showDriversForRoute(route) {
           marker.setPosition(pos);
           marker.infoWindow.setContent(infoContent);
           
-          // Redraw route if location is enabled
+          // Update route and recalculate ETA if location is enabled
           if (showEmployeeLocation && employeeLocation) {
-            drawRoute(pos, employeeLocation, driver.id, "#0000FF");
+            updateVehicleETAAndRoute(driver.id, marker);
           }
         } else {
           marker = new google.maps.Marker({
@@ -722,9 +722,9 @@ function showDriversForRoute(route) {
           marker.infoWindow = infoWindow;
           markersMap.set(driver.id, marker);
           
-          // Draw route if location is enabled
+          // Update route and recalculate ETA if location is enabled
           if (showEmployeeLocation && employeeLocation) {
-            drawRoute(pos, employeeLocation, driver.id, "#0000FF");
+            updateVehicleETAAndRoute(driver.id, marker);
           }
         }
         bounds.extend(pos);
@@ -898,6 +898,12 @@ async function handleAppLoadOrResume() {
     const returnToAdminDashboard = localStorage.getItem(RETURN_TO_ADMIN_DASHBOARD_KEY) === '1';
     if (session) {
       currentUserRole = session.role || "admin";
+      
+      const loginPage = document.getElementById("loginPage");
+      if (loginPage) {
+        loginPage.style.display = "none";
+      }
+
       initMap();
 
       if (restoreSavedPage(session, savedRoute, viewType, savedPage)) {
@@ -1131,6 +1137,20 @@ function showDriversForVehicle(vehicleNumber) {
           lat: liveData.location.latitude,
           lng: liveData.location.longitude
         };
+        const speed = (liveData.location.speed || 0) * 3.6;
+        const formattedSpeed = speed.toFixed(1);
+        document.getElementById("speedCircle").innerText = formattedSpeed + " km/h";
+        document.getElementById("speedCircle").style.display = "flex";
+
+        const updatedAt = liveData.lastUpdated ? new Date(liveData.lastUpdated).toLocaleString() : "Unknown time";
+        const infoContent = `
+          <div style="font-size:14px;">
+            <strong>${liveData.name || name}</strong><br>
+            Vehicle: ${vehicleNumber}<br>
+            Speed: ${formattedSpeed} km/h<br>
+            Last Updated: ${updatedAt}
+          </div>
+        `;
 
         if (!markersMap.has(driver.id)) {
           const vehicleMarker = new google.maps.Marker({
@@ -1141,7 +1161,7 @@ function showDriversForVehicle(vehicleNumber) {
           });
 
           const infoWindow = new google.maps.InfoWindow({
-            content: `<b>${liveData.name}</b><br>Vehicle: ${vehicleNumber}`
+            content: infoContent
           });
 
           vehicleMarker.addListener("click", () => infoWindow.open(map, vehicleMarker));
@@ -1149,10 +1169,17 @@ function showDriversForVehicle(vehicleNumber) {
 
           markersMap.set(driver.id, vehicleMarker);
         } else {
-          markersMap.get(driver.id).setPosition(pos);
+          const m = markersMap.get(driver.id);
+          m.setPosition(pos);
+          m.infoWindow.setContent(infoContent);
         }
 
         marker = markersMap.get(driver.id);
+
+        // Update route and recalculate ETA if location is enabled
+        if (showEmployeeLocation && employeeLocation) {
+          updateVehicleETAAndRoute(driver.id, marker);
+        }
 
         bounds.extend(pos);
         if (!userZoomed) {
@@ -1340,6 +1367,11 @@ async function showDriversForGeneralVehicle(vehicleNumber) {
           marker.addListener("click", () => infoWindow.open(map, marker));
           marker.infoWindow = infoWindow;
           markersMap.set(driver.id, marker);
+        }
+
+        // Update route and recalculate ETA if location is enabled
+        if (showEmployeeLocation && employeeLocation) {
+          updateVehicleETAAndRoute(driver.id, marker);
         }
         bounds.extend(pos);
         if (!userZoomed) {
@@ -1707,6 +1739,11 @@ function getEmployeeLocation() {
           if (employeeMarker && showEmployeeLocation) {
             employeeMarker.setPosition(employeeLocation);
           }
+          if (showEmployeeLocation) {
+            markersMap.forEach((vehicleMarker, driverId) => {
+              updateVehicleETAAndRoute(driverId, vehicleMarker);
+            });
+          }
         },
         error => {
           console.log('Location error:', error);
@@ -1728,25 +1765,123 @@ function getEmployeeLocation() {
     { enableHighAccuracy: true, timeout: 10000 }
   );
 }
+// Helper to calculate distance in meters using Haversine formula
+function getHaversineDistance(pos1, pos2) {
+  const lat1 = typeof pos1.lat === 'function' ? pos1.lat() : pos1.lat;
+  const lng1 = typeof pos1.lng === 'function' ? pos1.lng() : pos1.lng;
+  const lat2 = typeof pos2.lat === 'function' ? pos2.lat() : pos2.lat;
+  const lng2 = typeof pos2.lng === 'function' ? pos2.lng() : pos2.lng;
+
+  const R = 6371e3; // Earth radius in meters
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+  const deltaLambda = (lng2 - lng1) * Math.PI / 180;
+
+  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // distance in meters
+}
+
+// Helper to calculate mathematical ETA from distance
+function getHaversineETA(distanceInMeters) {
+  if (distanceInMeters < 50) {
+    return "Arrived";
+  }
+  const roadDistance = distanceInMeters * 1.4; // 1.4x road-winding factor
+  const averageSpeedMps = 25 * 1000 / 3600; // 25 km/h average speed
+  const timeInSeconds = roadDistance / averageSpeedMps;
+  const minutes = Math.round(timeInSeconds / 60);
+
+  if (minutes < 1) {
+    return "Nearby (< 1 min)";
+  }
+  if (minutes < 60) {
+    return `${minutes} min${minutes > 1 ? 's' : ''}`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMins = minutes % 60;
+  return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+}
+
+function updateVehicleETAAndRoute(driverId, vehicleMarker) {
+  if (!vehicleMarker || !employeeLocation) return;
+  const vehiclePos = vehicleMarker.getPosition();
+  if (!vehiclePos) return;
+
+  calculateETA(vehiclePos, (etaText) => {
+    // Update bottom ETA display
+    const etaDisplay = document.getElementById('etaDisplay');
+    const etaTimeElement = etaDisplay?.querySelector('.eta-time');
+    if (etaTimeElement) {
+      etaTimeElement.textContent = `ETA: ${etaText}`;
+    }
+    
+    // Update marker info window
+    const currentContent = vehicleMarker.infoWindow.getContent();
+    const strippedContent = currentContent.replace(/ETA:.*?<br>/g, '');
+    const updatedContent = strippedContent.replace('</div>', `ETA: <b>${etaText}</b><br></div>`);
+    vehicleMarker.infoWindow.setContent(updatedContent);
+  });
+
+  drawRoute(vehiclePos, employeeLocation, driverId, "#0000FF");
+}
+
 function calculateETA(vehiclePos, callback) {
-  if (!employeeLocation || !etaService || !vehiclePos) {
+  if (!employeeLocation) {
+    console.error("calculateETA: employeeLocation is not initialized.");
     callback("Location needed");
     return;
   }
+  if (!vehiclePos) {
+    console.error("calculateETA: vehiclePos is not initialized.");
+    callback("Location needed");
+    return;
+  }
+  if (!etaService) {
+    console.error("calculateETA: etaService (DistanceMatrixService) is not initialized.");
+    callback("ETA unavailable");
+    return;
+  }
 
+  // Calculate straight-line distance using Haversine formula
+  const distance = getHaversineDistance(vehiclePos, employeeLocation);
+
+  // If very close, display "Arrived" immediately to prevent API errors
+  if (distance < 50) {
+    callback("Arrived");
+    return;
+  }
+
+  const departureTime = new Date();
   etaService.getDistanceMatrix(
     {
       origins: [vehiclePos],
       destinations: [employeeLocation],
-      travelMode: google.maps.TravelMode.DRIVING
+      travelMode: google.maps.TravelMode.DRIVING,
+      drivingOptions: {
+        departureTime: departureTime
+      }
     },
     (response, status) => {
-      if (status === "OK" && response.rows[0]?.elements[0]?.status === "OK") {
-        const element = response.rows[0].elements[0];
-        const etaText = element.duration_in_traffic?.text || element.duration?.text || "Unknown";
-        callback(etaText);
+      if (status === "OK") {
+        const element = response.rows[0]?.elements[0];
+        if (element && element.status === "OK") {
+          const etaText = element.duration_in_traffic?.text || element.duration?.text || "Unknown";
+          callback(etaText);
+        } else {
+          const elementStatus = element ? element.status : "No element";
+          console.error("Distance Matrix API element error:", elementStatus, response);
+          // Fallback to mathematical estimation
+          callback(getHaversineETA(distance));
+        }
       } else {
-        callback("ETA unavailable");
+        console.error("Distance Matrix API top-level error:", status, response);
+        // Fallback to mathematical estimation
+        callback(getHaversineETA(distance));
       }
     }
   );
@@ -1784,6 +1919,11 @@ function toggleEmployeeLocation() {
           };
           if (employeeMarker && showEmployeeLocation) {
             employeeMarker.setPosition(employeeLocation);
+          }
+          if (showEmployeeLocation) {
+            markersMap.forEach((vehicleMarker, driverId) => {
+              updateVehicleETAAndRoute(driverId, vehicleMarker);
+            });
           }
         },
         error => console.log('Location tracking error:', error),
