@@ -898,12 +898,6 @@ async function handleAppLoadOrResume() {
     const returnToAdminDashboard = localStorage.getItem(RETURN_TO_ADMIN_DASHBOARD_KEY) === '1';
     if (session) {
       currentUserRole = session.role || "admin";
-      
-      const loginPage = document.getElementById("loginPage");
-      if (loginPage) {
-        loginPage.style.display = "none";
-      }
-
       initMap();
 
       if (restoreSavedPage(session, savedRoute, viewType, savedPage)) {
@@ -1137,20 +1131,6 @@ function showDriversForVehicle(vehicleNumber) {
           lat: liveData.location.latitude,
           lng: liveData.location.longitude
         };
-        const speed = (liveData.location.speed || 0) * 3.6;
-        const formattedSpeed = speed.toFixed(1);
-        document.getElementById("speedCircle").innerText = formattedSpeed + " km/h";
-        document.getElementById("speedCircle").style.display = "flex";
-
-        const updatedAt = liveData.lastUpdated ? new Date(liveData.lastUpdated).toLocaleString() : "Unknown time";
-        const infoContent = `
-          <div style="font-size:14px;">
-            <strong>${liveData.name || name}</strong><br>
-            Vehicle: ${vehicleNumber}<br>
-            Speed: ${formattedSpeed} km/h<br>
-            Last Updated: ${updatedAt}
-          </div>
-        `;
 
         if (!markersMap.has(driver.id)) {
           const vehicleMarker = new google.maps.Marker({
@@ -1161,7 +1141,7 @@ function showDriversForVehicle(vehicleNumber) {
           });
 
           const infoWindow = new google.maps.InfoWindow({
-            content: infoContent
+            content: `<b>${liveData.name}</b><br>Vehicle: ${vehicleNumber}`
           });
 
           vehicleMarker.addListener("click", () => infoWindow.open(map, vehicleMarker));
@@ -1169,9 +1149,7 @@ function showDriversForVehicle(vehicleNumber) {
 
           markersMap.set(driver.id, vehicleMarker);
         } else {
-          const m = markersMap.get(driver.id);
-          m.setPosition(pos);
-          m.infoWindow.setContent(infoContent);
+          markersMap.get(driver.id).setPosition(pos);
         }
 
         marker = markersMap.get(driver.id);
