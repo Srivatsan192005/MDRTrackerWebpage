@@ -125,6 +125,7 @@ let routePolylines = new Map();
 let directionsService;
 let locationAsked = false;
 let currentViewType = localStorage.getItem('viewType') || null;
+let lastDriversStructureKey = "";
 
 const sharedInfoWindow = typeof google !== "undefined" && google.maps
   ? new google.maps.InfoWindow()
@@ -398,6 +399,16 @@ async function fetchDrivers() {
         }
       }
     });
+
+    const currentStructureKey = allDrivers
+      .map(d => `${d.id}:${d.name || ""}:${d.role || ""}:${d.assignedRoute || ""}:${d.assignedVehicle || ""}`)
+      .sort()
+      .join('|');
+
+    if (currentStructureKey === lastDriversStructureKey) {
+      return; // Skip structural view re-renders if driver info/assignments haven't changed
+    }
+    lastDriversStructureKey = currentStructureKey;
     
     // Only show route selection if no route is set AND user is admin
     if (!currentRoute && currentUserRole === "admin") {
