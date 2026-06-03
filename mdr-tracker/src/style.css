@@ -1866,6 +1866,19 @@ body, html {
     flex: 1 1 auto;
   }
 
+  .eta-display {
+    top: max(72px, calc(env(safe-area-inset-top) + 72px));
+    bottom: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(220px, calc(100vw - 112px));
+    min-width: 0;
+    text-align: center;
+    margin-bottom: 0;
+    z-index: 1450;
+  }
+
   .drivers-container {
     padding: 18px 16px !important;
   }
