@@ -752,6 +752,11 @@ function clearMarkers() {
     sharedInfoWindow.close();
   }
   clearRoutes();
+
+  const speedCircle = document.getElementById("speedCircle");
+  if (speedCircle) {
+    speedCircle.style.display = "none";
+  }
 }
 
 function clearListeners() {
@@ -1736,7 +1741,7 @@ function getEmployeeLocation() {
       sessionStorage.setItem('locationAsked', 'true');
       console.log('Location denied');
     },
-    { enableHighAccuracy: true, timeout: 10000 }
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
   );
 }
 // Helper to calculate distance in meters using Haversine formula
@@ -1916,7 +1921,7 @@ function toggleEmployeeLocation() {
       else if (error.code === 3) errorMsg += "Request timeout.";
       showToast(errorMsg, "error");
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
   );
 }
 

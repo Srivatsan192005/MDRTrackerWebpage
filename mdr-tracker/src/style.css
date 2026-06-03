@@ -84,15 +84,13 @@ html, body {
 
 /* Floating glass dock for map controls on mobile */
 .map-controls {
-  /* mobile-first: bottom-right dock */
-  position: fixed;
+  position: absolute;
   right: max(12px, env(safe-area-inset-right));
-  bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+  top: 80px;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 8px;
   z-index: 1400;
-  backdrop-filter: blur(6px);
 }
 
 /* Responsive grids & cards */
@@ -863,16 +861,15 @@ body, html {
   visibility: visible !important;
 }
 
-#bar.open ~ .map-container #speedCircle,
-#bar.open ~ .map-container #etaDisplay {
-  display: none !important;
-}
-
-/* When the sidebar is open, hide map side controls on mobile to avoid overlap */
+/* When the sidebar is open, hide map side controls and indicators on mobile to avoid overlap */
 @media (max-width: 768px) {
   #bar.open ~ .map-container .map-controls {
     display: none !important;
     pointer-events: none !important;
+  }
+  #bar.open ~ .map-container #speedCircle,
+  #bar.open ~ .map-container #etaDisplay {
+    display: none !important;
   }
 }
 
@@ -1178,18 +1175,6 @@ body, html {
   height: 100%;
 }
 
-.map-controls {
-  position: absolute;
-  top: 57px;
-  right: 8px;
-  bottom: auto;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 1000;
-}
 
 .map-btn {
   background: #ffffff;
@@ -1441,10 +1426,7 @@ body, html {
   }
   
 
-  .map-controls {
-    bottom: 16px;
-    right: 16px;
-  }
+
   
   .map-btn {
     width: 48px;
@@ -2032,8 +2014,5 @@ body, html {
     padding: 6px 10px;
   }
 
-  .map-controls {
-    right: 12px;
-    bottom: 12px;
-  }
+
 }
