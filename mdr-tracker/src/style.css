@@ -185,8 +185,8 @@ body { font-size: var(--body); }
 
 /* Sidebar: mobile drawer behavior */
 .sidebar {
-  width: 88vw;
-  max-width: 420px;
+  width: 85vw;
+  max-width: 310px;
   transform: translateX(-110%);
   box-shadow: 0 18px 40px rgba(2,6,23,0.18);
 }
@@ -841,7 +841,7 @@ body, html {
   top: 0;
   bottom: 0;
   height: 100vh !important;
-  width: min(90vw, 380px) !important;
+  width: min(85vw, 310px) !important;
   background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
@@ -981,7 +981,7 @@ body, html {
 }
 
 #sidebarLogoutButton::before {
-  content: '⏻' !important;
+  content: '🚪' !important;
   color: white !important;
 }
 
@@ -1003,7 +1003,7 @@ body, html {
 
 
 .action-btn.logout-btn::before {
-  content: '⏻';
+  content: '🚪';
 }
 
 /* Toggle Sidebar Button */
@@ -1097,7 +1097,8 @@ body, html {
 }
 
 .sidebar-footer {
-  margin-top: auto;
+  margin-top: 12px;
+  margin-bottom: 12px;
   padding: 10px 0 0;
   border-top: none;
 }
@@ -1369,7 +1370,7 @@ body, html {
 }
 
 .top-logout-btn::before {
-  content: '⏻';
+  content: '🚪';
 }
 
 .sidebar.hidden ~ .top-controls {

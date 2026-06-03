@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
       localStorage.removeItem('currentRoute');
       localStorage.removeItem('viewType');
 
-      window.location.href = '../index.html';
+      window.location.href = '/';
     });
   }
 

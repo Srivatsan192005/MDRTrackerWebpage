@@ -322,21 +322,20 @@ function restoreSavedPage(session, savedRoute, viewType, savedPage) {
     return true;
   }
 
-  if (savedRoute && viewType === "generalVehicle") {
-    currentRoute = savedRoute;
-    showDriversForGeneralVehicle(savedRoute);
-    return true;
-  }
-
-  if (savedRoute && viewType === "vehicle") {
-    currentRoute = savedRoute;
-    showDriversForVehicle(savedRoute);
-    return true;
-  }
-
-  if (savedRoute && viewType === "route") {
-    currentRoute = savedRoute;
-    if (showAssignedView(savedRoute, session?.vehicleNumber)) {
+  if (savedPage === "tracking" && savedRoute && viewType) {
+    if (viewType === "generalVehicle") {
+      currentRoute = savedRoute;
+      showDriversForGeneralVehicle(savedRoute);
+      return true;
+    }
+    if (viewType === "vehicle") {
+      currentRoute = savedRoute;
+      showDriversForVehicle(savedRoute);
+      return true;
+    }
+    if (viewType === "route") {
+      currentRoute = savedRoute;
+      showDriversForRoute(savedRoute);
       return true;
     }
   }
@@ -345,25 +344,6 @@ function restoreSavedPage(session, savedRoute, viewType, savedPage) {
     if (session && session.role === "admin") {
       showRouteSelection();
       return true;
-    }
-  }
-
-  if (savedPage === "tracking") {
-    if (session && session.role === "admin") {
-      if (savedRoute && viewType === "vehicle") {
-        currentRoute = savedRoute;
-        showDriversForVehicle(savedRoute);
-        return true;
-      }
-
-      showRouteSelection();
-      return true;
-    }
-
-    if (session && session.assignedRoute) {
-      if (showAssignedView(session.assignedRoute, session.vehicleNumber)) {
-        return true;
-      }
     }
   }
 
@@ -1131,6 +1111,20 @@ function showDriversForVehicle(vehicleNumber) {
           lat: liveData.location.latitude,
           lng: liveData.location.longitude
         };
+        const speed = (liveData.location.speed || 0) * 3.6;
+        const formattedSpeed = speed.toFixed(1);
+        document.getElementById("speedCircle").innerText = formattedSpeed + " km/h";
+        document.getElementById("speedCircle").style.display = "flex";
+
+        const updatedAt = liveData.lastUpdated ? new Date(liveData.lastUpdated).toLocaleString() : "Unknown time";
+        const infoContent = `
+          <div style="font-size:14px;">
+            <strong>${name}</strong><br>
+            Vehicle: ${vehicleNumber}<br>
+            Speed: ${formattedSpeed} km/h<br>
+            Last Updated: ${updatedAt}
+          </div>
+        `;
 
         if (!markersMap.has(driver.id)) {
           const vehicleMarker = new google.maps.Marker({
@@ -1141,7 +1135,7 @@ function showDriversForVehicle(vehicleNumber) {
           });
 
           const infoWindow = new google.maps.InfoWindow({
-            content: `<b>${liveData.name}</b><br>Vehicle: ${vehicleNumber}`
+            content: infoContent
           });
 
           vehicleMarker.addListener("click", () => infoWindow.open(map, vehicleMarker));
@@ -1149,7 +1143,9 @@ function showDriversForVehicle(vehicleNumber) {
 
           markersMap.set(driver.id, vehicleMarker);
         } else {
-          markersMap.get(driver.id).setPosition(pos);
+          const m = markersMap.get(driver.id);
+          m.setPosition(pos);
+          m.infoWindow.setContent(infoContent);
         }
 
         marker = markersMap.get(driver.id);
