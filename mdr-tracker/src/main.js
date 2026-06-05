@@ -370,11 +370,28 @@ function initMap() {
 
   clearRoutes();
   map.addListener("zoom_changed", () => userZoomed = true);
-  fetchDrivers();
+  
+  if (currentRoute) {
+    if (currentViewType === 'generalVehicle') {
+      showDriversForGeneralVehicle(currentRoute);
+    } else if (currentUserRole === "admin") {
+      showDriversForVehicle(currentRoute);
+    } else {
+      showDriversForRoute(currentRoute);
+    }
+  }
 }
 
+let isListeningToDrivers = false;
+
 async function fetchDrivers() {
-  await syncAssignedUsersToFirebase();
+  if (isListeningToDrivers) return;
+  isListeningToDrivers = true;
+
+  // Run Supabase-to-Firebase sync in the background without blocking the initial Firebase read
+  syncAssignedUsersToFirebase().catch(error => {
+    console.warn("Background user sync failed:", error);
+  });
 
   const usersRef = ref(db, "users");
   onValue(usersRef, snapshot => {
@@ -413,7 +430,7 @@ async function fetchDrivers() {
     // Only show route selection if no route is set AND user is admin
     if (!currentRoute && currentUserRole === "admin") {
       showRouteSelection();
-    } else if (currentRoute) {
+    } else if (currentRoute && map && typeof google !== "undefined" && google.maps) {
       // Refresh current view without changing the display
       if (currentViewType === 'generalVehicle') {
         showDriversForGeneralVehicle(currentRoute);
@@ -718,15 +735,21 @@ function showDriversForRoute(route) {
             updateVehicleETAAndRoute(driver.id, marker);
           }
         }
-        bounds.extend(pos);
-        if (!userZoomed) {
-          map.fitBounds(bounds);
-          const currentZoom = map.getZoom();
-          if (currentZoom > 12) {
-            map.setZoom(currentZoom - 3); 
+        const isMoving = speed > 1;
+        if (isMoving) {
+          map.setCenter(pos);
+          map.setZoom(16);
+        } else {
+          bounds.extend(pos);
+          if (!userZoomed) {
+            map.fitBounds(bounds);
+            const currentZoom = map.getZoom();
+            if (currentZoom > 12) {
+              map.setZoom(currentZoom - 3); 
+            }
           }
+          map.setCenter(bounds.getCenter());
         }
-        map.setCenter(bounds.getCenter());
       }
     });
     driverRefs.set(driver.id, unsub);
@@ -857,6 +880,9 @@ async function runTemporaryInsert() {
 }
 
 async function handleAppLoadOrResume() {
+  // Pre-fetch drivers from Firebase Realtime Database in parallel with Google Maps loading
+  fetchDrivers();
+
   try {
     try {
       await loadGoogleMapsApi();
@@ -1171,12 +1197,18 @@ function showDriversForVehicle(vehicleNumber) {
           updateVehicleETAAndRoute(driver.id, marker);
         }
 
-        bounds.extend(pos);
-        if (!userZoomed) {
-          map.fitBounds(bounds);
-          const currentZoom = map.getZoom();
-          if (currentZoom > 12) {
-            map.setZoom(currentZoom - 3);
+        const isMoving = speed > 1;
+        if (isMoving) {
+          map.setCenter(pos);
+          map.setZoom(16);
+        } else {
+          bounds.extend(pos);
+          if (!userZoomed) {
+            map.fitBounds(bounds);
+            const currentZoom = map.getZoom();
+            if (currentZoom > 12) {
+              map.setZoom(currentZoom - 3);
+            }
           }
         }
       }
@@ -1363,15 +1395,21 @@ async function showDriversForGeneralVehicle(vehicleNumber) {
         if (showEmployeeLocation && employeeLocation) {
           updateVehicleETAAndRoute(driver.id, marker);
         }
-        bounds.extend(pos);
-        if (!userZoomed) {
-          map.fitBounds(bounds);
-          const currentZoom = map.getZoom();
-          if (currentZoom > 12) {
-            map.setZoom(currentZoom - 3);
+        const isMoving = speed > 1;
+        if (isMoving) {
+          map.setCenter(pos);
+          map.setZoom(16);
+        } else {
+          bounds.extend(pos);
+          if (!userZoomed) {
+            map.fitBounds(bounds);
+            const currentZoom = map.getZoom();
+            if (currentZoom > 12) {
+              map.setZoom(currentZoom - 3);
+            }
           }
+          map.setCenter(bounds.getCenter());
         }
-        map.setCenter(bounds.getCenter());
       }
     }, error => {
       if (isFirebasePermissionError(error)) {
@@ -2062,35 +2100,25 @@ function deactivateETA() {
   });
 }
 
-function drawRoute(driverPos, employeePos, driverId, color = "#FF0000") {
-  if (!driverPos || !employeePos || !directionsService) {
+function drawRoute(driverPos, employeePos, driverId, color = "#0000FF") {
+  if (!driverPos || !employeePos) {
     return;
   }
 
-  directionsService.route(
-    {
-      origin: driverPos,
-      destination: employeePos,
-      travelMode: google.maps.TravelMode.DRIVING
-    },
-    (response, status) => {
-      if (status === "OK") {
-        if (routePolylines.has(driverId)) {
-          routePolylines.get(driverId).setMap(null);
-        }
+  if (routePolylines.has(driverId)) {
+    routePolylines.get(driverId).setMap(null);
+  }
 
-        const polyline = new google.maps.Polyline({
-          path: response.routes[0].overview_path,
-          strokeColor: color,
-          strokeOpacity: 0.8,
-          strokeWeight: 3
-        });
+  const polyline = new google.maps.Polyline({
+    path: [driverPos, employeePos],
+    geodesic: true,
+    strokeColor: "#0000FF",
+    strokeOpacity: 0.8,
+    strokeWeight: 3
+  });
 
-        polyline.setMap(map);
-        routePolylines.set(driverId, polyline);
-      }
-    }
-  );
+  polyline.setMap(map);
+  routePolylines.set(driverId, polyline);
 }
 
 function clearRoutes() {
