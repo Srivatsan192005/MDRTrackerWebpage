@@ -569,6 +569,7 @@ function showDriversForRoute(route) {
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "flex";
   refreshMapLayout();
+  userZoomed = false;
   
   // Show/hide location button based on user role
   const locationBtn = document.getElementById('toggleEmployeeLocationBtn');
@@ -736,19 +737,19 @@ function showDriversForRoute(route) {
           }
         }
         const isMoving = speed > 1;
-        if (isMoving) {
-          map.setCenter(pos);
-          map.setZoom(16);
-        } else {
-          bounds.extend(pos);
-          if (!userZoomed) {
+        if (!userZoomed) {
+          if (isMoving) {
+            map.setCenter(pos);
+            map.setZoom(16);
+          } else {
+            bounds.extend(pos);
             map.fitBounds(bounds);
             const currentZoom = map.getZoom();
             if (currentZoom > 12) {
               map.setZoom(currentZoom - 3); 
             }
+            map.setCenter(bounds.getCenter());
           }
-          map.setCenter(bounds.getCenter());
         }
       }
     });
@@ -1053,6 +1054,7 @@ function showDriversForVehicle(vehicleNumber) {
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "flex";
   refreshMapLayout();
+  userZoomed = false;
 
   const locationBtn = document.getElementById('toggleEmployeeLocationBtn');
   if (locationBtn) {
@@ -1198,12 +1200,12 @@ function showDriversForVehicle(vehicleNumber) {
         }
 
         const isMoving = speed > 1;
-        if (isMoving) {
-          map.setCenter(pos);
-          map.setZoom(16);
-        } else {
-          bounds.extend(pos);
-          if (!userZoomed) {
+        if (!userZoomed) {
+          if (isMoving) {
+            map.setCenter(pos);
+            map.setZoom(16);
+          } else {
+            bounds.extend(pos);
             map.fitBounds(bounds);
             const currentZoom = map.getZoom();
             if (currentZoom > 12) {
@@ -1236,6 +1238,7 @@ async function showDriversForGeneralVehicle(vehicleNumber) {
   document.getElementById("routeSelectionPage").style.display = "none";
   document.getElementById("trackingPage").style.display = "flex";
   refreshMapLayout();
+  userZoomed = false;
 
   const locationBtn = document.getElementById('toggleEmployeeLocationBtn');
   if (locationBtn) {
@@ -1396,19 +1399,19 @@ async function showDriversForGeneralVehicle(vehicleNumber) {
           updateVehicleETAAndRoute(driver.id, marker);
         }
         const isMoving = speed > 1;
-        if (isMoving) {
-          map.setCenter(pos);
-          map.setZoom(16);
-        } else {
-          bounds.extend(pos);
-          if (!userZoomed) {
+        if (!userZoomed) {
+          if (isMoving) {
+            map.setCenter(pos);
+            map.setZoom(16);
+          } else {
+            bounds.extend(pos);
             map.fitBounds(bounds);
             const currentZoom = map.getZoom();
             if (currentZoom > 12) {
               map.setZoom(currentZoom - 3);
             }
+            map.setCenter(bounds.getCenter());
           }
-          map.setCenter(bounds.getCenter());
         }
       }
     }, error => {
@@ -2101,24 +2104,40 @@ function deactivateETA() {
 }
 
 function drawRoute(driverPos, employeePos, driverId, color = "#0000FF") {
-  if (!driverPos || !employeePos) {
+  console.log("[drawRoute] Requesting directions:", { driverPos: driverPos?.toString(), employeePos, driverId, hasService: !!directionsService });
+  if (!driverPos || !employeePos || !directionsService) {
+    console.warn("[drawRoute] Missing coordinates or DirectionsService not initialized.");
     return;
   }
 
-  if (routePolylines.has(driverId)) {
-    routePolylines.get(driverId).setMap(null);
-  }
+  directionsService.route(
+    {
+      origin: driverPos,
+      destination: employeePos,
+      travelMode: google.maps.TravelMode.DRIVING
+    },
+    (response, status) => {
+      console.log("[drawRoute] Directions API status:", status);
+      if (status === "OK") {
+        if (routePolylines.has(driverId)) {
+          routePolylines.get(driverId).setMap(null);
+        }
 
-  const polyline = new google.maps.Polyline({
-    path: [driverPos, employeePos],
-    geodesic: true,
-    strokeColor: "#0000FF",
-    strokeOpacity: 0.8,
-    strokeWeight: 3
-  });
+        const polyline = new google.maps.Polyline({
+          path: response.routes[0].overview_path,
+          strokeColor: color,
+          strokeOpacity: 0.8,
+          strokeWeight: 3
+        });
 
-  polyline.setMap(map);
-  routePolylines.set(driverId, polyline);
+        polyline.setMap(map);
+        routePolylines.set(driverId, polyline);
+        console.log("[drawRoute] Polyline successfully drawn on the map.");
+      } else {
+        console.error("[drawRoute] Directions request failed due to: " + status, response);
+      }
+    }
+  );
 }
 
 function clearRoutes() {
