@@ -245,6 +245,10 @@ async function createUser() {
     document.getElementById("userRole").value = "employee";
     document.getElementById("assignedRoute").value = "";
     document.getElementById("newVehicleNumber").value = "";
+    const vehicleGroup = document.getElementById("vehicleNumberGroup");
+    if (vehicleGroup) {
+      vehicleGroup.style.display = "none";
+    }
 
     // Refresh the user list
     fetchAndDisplayUsers();
@@ -408,6 +412,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Load user list
   fetchAndDisplayUsers();
+
+  // Show vehicle selection only when general route is selected
+  const assignedRouteSelect = document.getElementById("assignedRoute");
+  const vehicleNumberGroup = document.getElementById("vehicleNumberGroup");
+  if (assignedRouteSelect && vehicleNumberGroup) {
+    const toggleVehicleVisibility = () => {
+      if (assignedRouteSelect.value.toLowerCase() === "general") {
+        vehicleNumberGroup.style.display = "block";
+      } else {
+        vehicleNumberGroup.style.display = "none";
+        const vehicleSelect = document.getElementById("newVehicleNumber");
+        if (vehicleSelect) vehicleSelect.value = "";
+      }
+    };
+
+    assignedRouteSelect.addEventListener("change", toggleVehicleVisibility);
+    toggleVehicleVisibility();
+  }
 
   // Tab switching flow
   const tabAddBtn = document.getElementById("tabAddBtn");
